@@ -2,6 +2,7 @@ import cv2
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+from bresenham import bresenham
 
 
 # TODO debug values
@@ -134,10 +135,13 @@ def main():
 
     alpha = 270
     alpha_in_radians = np.radians(alpha)
-    emitter = emitter_position(radius, alpha_in_radians, radius)
+    emitter_x, emitter_y = emitter_position(radius, alpha_in_radians, radius)
 
     scan_angle_in_radius = np.radians(scan_angle)
-    print(detectors_position(radius, alpha_in_radians, scan_angle_in_radius, radius, detectors_counter))
+    detectors = detectors_position(radius, alpha_in_radians, scan_angle_in_radius, radius, detectors_counter)
+    detector_x, detector_y = detectors[1]
+
+    print(list(bresenham(emitter_x, emitter_y, detector_x, detector_y)))
 
 
 if __name__ == "__main__":
@@ -149,9 +153,9 @@ if __name__ == "__main__":
     # * Calculation angle per step to have 360 degrees [DONE]
     # * Calculation detector's angle (between two detectors) [DONE]
     # * Function to calculation positions on image our detectors and emitter [DONE]
+    # * Bresenham line interpolation [DONE]
 
     # TODO
-    # * Bresenham line interpolation
     # * Calculation sum of values on line emitter --> detector
     # * Make sinogram
     # * Filtered sinogram
