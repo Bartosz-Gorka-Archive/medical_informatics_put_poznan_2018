@@ -91,7 +91,11 @@ def detectors_position(radius, alpha_in_radians, scan_angle_in_radius, center_po
     # List with positions of detectors
     detectors = list()
 
-    # TODO add way to calculate positions when passed only 1 detector - now raise error divide by zero.
+    # add way to calculate positions when passed only 1 detector - eliminate raise error divide by zero.
+    original_no_detectors = no_detectors
+    if no_detectors == 1:
+        no_detectors = 3
+
     for index in range(no_detectors):
         # Calculate value from formula
         value = np.pi + alpha_in_radians - (scan_angle_in_radius / 2) + (index * (scan_angle_in_radius / (no_detectors - 1)))
@@ -107,7 +111,10 @@ def detectors_position(radius, alpha_in_radians, scan_angle_in_radius, center_po
         detectors.append(detector)
 
     # Return calculated positions
-    return detectors
+    if original_no_detectors == 1:
+        return list(detectors[1])
+    else:
+        return detectors
 
 
 def main():
