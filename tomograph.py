@@ -124,7 +124,7 @@ def sum_values_on_line(picture, emitter, detector):
     detector_x, detector_y = detector
 
     # Prepare line from emitter to detector - use Bresenham interpolation
-    line = list(bresenham(emitter_x, emitter_y, detector_x, detector_y))
+    line = bresenham(emitter_x, emitter_y, detector_x, detector_y)
 
     # Sum - result
     value = 0.0
@@ -169,6 +169,36 @@ def make_sinogram(picture, radius, no_iterations, scan_angle, no_detectors):
     return result
 
 
+def reverse_sinogram(picture, sinogram, radius, no_iterations, scan_angle, no_detectors):
+    # Prepare zeros array with the same size like picture
+    result = np.zeros_like(picture, dtype=float)
+
+    # Angle per iteration, scan angle in radius
+    angle_per_iteration = calculate_iterations_angle(no_iterations)
+    scan_angle_in_radius = np.radians(scan_angle)
+
+    # Loop to place values from sinogram
+    for iteration in range(no_iterations):
+        # Calculate alpha value in radians
+        alpha_in_radians = np.radians(angle_per_iteration * iteration)
+        # Calculate positions of emitter and detectors
+        emitter_x, emitter_y = emitter_position(radius, alpha_in_radians, radius)
+        detectors = detectors_position(radius, alpha_in_radians, scan_angle_in_radius, radius, no_detectors)
+
+        for index, detector in enumerate(detectors):
+            # Split position of detector to x, y
+            detector_x, detector_y = detector
+            # Line between emitter and selected detector
+            line = bresenham(emitter_x, emitter_y, detector_x, detector_y)
+
+            for position_x, position_y in line:
+                # Append values to image
+                result[position_x, position_y] += sinogram[iteration, index]
+
+    # Return prepared image
+    return result
+
+
 def main():
     # TODO move parameters as named program's parameters
     detectors_counter = 100
@@ -178,11 +208,11 @@ def main():
     filename = "Files/Kwadraty2.jpg"
     file, height, width = read_file(filename)
     picture, radius = prepare_circle(file, height, width)
-    # write_file("example", file)
-    # write_file("example_test", test)
 
-    # sinogram = make_sinogram(picture, radius, iterations, scan_angle, detectors_counter)
-    # write_file("sinogram", sinogram)
+    sinogram = make_sinogram(picture, radius, iterations, scan_angle, detectors_counter)
+    write_file("sinogram", sinogram)
+    picture_from_reverse_sinogram = reverse_sinogram(picture, sinogram, radius, iterations, scan_angle, detectors_counter)
+    write_file("reverse", picture_from_reverse_sinogram)
 
 
 if __name__ == "__main__":
@@ -196,14 +226,16 @@ if __name__ == "__main__":
     # * Function to calculation positions on image our detectors and emitter [DONE]
     # * Bresenham line interpolation [DONE]
     # * Calculation sum of values on line emitter --> detector [DONE]
-    # * Make sinogram
+    # * Make sinogram [DONE]
+    # * Normalize values in sinogram [DONE]
+    # * Write sinogram to file [DONE]
+    # * Reverse Radon transformation - from sinogram make picture [DONE]
 
     # TODO
-    # * Filtered sinogram
-    # * Write sinogram to file
+    # * Return size of result to original from base picture
     # * Calculation MSE in percent (current / max_errors_possible)
-    # * Reverse Radon transformation - from sinogram make picture
     # * Save result to file with calculated MSE on it.
+    # * Convolve - own, not from library files
+    # * Filtered sinogram
     # * Display mode - extra parameter to disable calculations and show only results
     # * GUI
-    # * Convolve - own, not from library files
