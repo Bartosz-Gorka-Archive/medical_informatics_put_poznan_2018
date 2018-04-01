@@ -137,29 +137,43 @@ def sum_values_on_line(picture, emitter, detector):
     return value
 
 
+def make_sinogram_line(picture, emitter, detectors):
+    line = np.zeros(len(detectors))
+    for index, selected_detector in enumerate(detectors):
+        line[index] = sum_values_on_line(picture, emitter, selected_detector)
+    return line
+
+
+def make_sinogram(picture, radius, no_iterations, scan_angle, no_detectors):
+    angle_per_interation = calculate_iterations_angle(no_iterations)
+    scan_angle_in_radius = np.radians(scan_angle)
+    result = np.empty((no_iterations, no_detectors))
+
+    for iteration in range(no_iterations):
+        alpha_in_radians = np.radians(angle_per_interation * iteration)
+        emitter = emitter_position(radius, alpha_in_radians, radius)
+        detectors = detectors_position(radius, alpha_in_radians, scan_angle_in_radius, radius, no_detectors)
+
+        line = make_sinogram_line(picture, emitter, detectors)
+        result[iteration] = line
+
+    return result
+
+
 def main():
     # TODO move parameters as named program's parameters
-    detectors_counter = 3
+    detectors_counter = 100
     scan_angle = 180
-    iterations = 10
+    iterations = 100
 
-    filename = "Files/Kolo.jpg"
+    filename = "Files/Kwadraty2.jpg"
     file, height, width = read_file(filename)
     picture, radius = prepare_circle(file, height, width)
     # write_file("example", file)
     # write_file("example_test", test)
 
-    # print(calculate_iterations_angle(iterations))
-    # print(calculate_angle_between_detectors(detectors_counter, scan_angle))
-
-    alpha = 0
-    alpha_in_radians = np.radians(alpha)
-    emitter = emitter_position(radius, alpha_in_radians, radius)
-
-    scan_angle_in_radius = np.radians(scan_angle)
-    detectors = detectors_position(radius, alpha_in_radians, scan_angle_in_radius, radius, detectors_counter)
-
-    sum_values_on_line(picture, emitter, detectors[1])
+    # sinogram = make_sinogram(picture, radius, iterations, scan_angle, detectors_counter)
+    # write_file("sinogram", sinogram)
 
 
 if __name__ == "__main__":
@@ -173,9 +187,9 @@ if __name__ == "__main__":
     # * Function to calculation positions on image our detectors and emitter [DONE]
     # * Bresenham line interpolation [DONE]
     # * Calculation sum of values on line emitter --> detector [DONE]
+    # * Make sinogram
 
     # TODO
-    # * Make sinogram
     # * Filtered sinogram
     # * Write sinogram to file
     # * Calculation MSE in percent (current / max_errors_possible)
