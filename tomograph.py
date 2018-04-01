@@ -21,7 +21,7 @@ def read_file(filename):
 
 def prepare_circle(file, height, width):
     # Calculation diagonal
-    diagonal = int(math.sqrt((height ** 2) + (width ** 2))) + 5
+    diagonal = int(math.sqrt((height ** 2) + (width ** 2))) + 10
     # Append empty values outside the image
     image = np.zeros((diagonal, diagonal), dtype=np.uint8)
 
@@ -118,9 +118,28 @@ def detectors_position(radius, alpha_in_radians, scan_angle_in_radius, center_po
         return detectors
 
 
+def sum_values_on_line(picture, emitter, detector):
+    # Split positions of emitter and detector to x, y
+    emitter_x, emitter_y = emitter
+    detector_x, detector_y = detector
+
+    # Prepare line from emitter to detector - use Bresenham interpolation
+    line = list(bresenham(emitter_x, emitter_y, detector_x, detector_y))
+
+    # Sum - result
+    value = 0.0
+
+    # Loop to fetch values from picture
+    for position in line:
+        value += picture.item(position)
+
+    # Return sum
+    return value
+
+
 def main():
     # TODO move parameters as named program's parameters
-    detectors_counter = 2
+    detectors_counter = 3
     scan_angle = 180
     iterations = 10
 
@@ -133,15 +152,14 @@ def main():
     # print(calculate_iterations_angle(iterations))
     # print(calculate_angle_between_detectors(detectors_counter, scan_angle))
 
-    alpha = 270
+    alpha = 0
     alpha_in_radians = np.radians(alpha)
-    emitter_x, emitter_y = emitter_position(radius, alpha_in_radians, radius)
+    emitter = emitter_position(radius, alpha_in_radians, radius)
 
     scan_angle_in_radius = np.radians(scan_angle)
     detectors = detectors_position(radius, alpha_in_radians, scan_angle_in_radius, radius, detectors_counter)
-    detector_x, detector_y = detectors[1]
 
-    print(list(bresenham(emitter_x, emitter_y, detector_x, detector_y)))
+    sum_values_on_line(picture, emitter, detectors[1])
 
 
 if __name__ == "__main__":
@@ -154,9 +172,9 @@ if __name__ == "__main__":
     # * Calculation detector's angle (between two detectors) [DONE]
     # * Function to calculation positions on image our detectors and emitter [DONE]
     # * Bresenham line interpolation [DONE]
+    # * Calculation sum of values on line emitter --> detector [DONE]
 
     # TODO
-    # * Calculation sum of values on line emitter --> detector
     # * Make sinogram
     # * Filtered sinogram
     # * Write sinogram to file
