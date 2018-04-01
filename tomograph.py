@@ -145,18 +145,27 @@ def make_sinogram_line(picture, emitter, detectors):
 
 
 def make_sinogram(picture, radius, no_iterations, scan_angle, no_detectors):
-    angle_per_interation = calculate_iterations_angle(no_iterations)
+    # Angle per iteration, scan angle in radius
+    angle_per_iteration = calculate_iterations_angle(no_iterations)
     scan_angle_in_radius = np.radians(scan_angle)
+    # Empty results - already with correct size no_iterations x no_detectors
     result = np.empty((no_iterations, no_detectors))
 
+    # Loop to generate line in sinogram
     for iteration in range(no_iterations):
-        alpha_in_radians = np.radians(angle_per_interation * iteration)
+        # Calculate alpha value in radians
+        alpha_in_radians = np.radians(angle_per_iteration * iteration)
+        # Calculate positions of emitter and detectors
         emitter = emitter_position(radius, alpha_in_radians, radius)
         detectors = detectors_position(radius, alpha_in_radians, scan_angle_in_radius, radius, no_detectors)
-
+        # Generate single line of sinogram
         line = make_sinogram_line(picture, emitter, detectors)
+        # Set value in results array
         result[iteration] = line
 
+    # Normalize result to ensure correct format and values inside array
+    cv2.normalize(result, result, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
+    # Return prepared sinogram
     return result
 
 
