@@ -169,9 +169,10 @@ def make_sinogram(picture, radius, no_iterations, scan_angle, no_detectors):
     return result
 
 
-def reverse_sinogram(picture, sinogram, radius, no_iterations, scan_angle, no_detectors, height, width):
+def reverse_sinogram(original, picture, sinogram, radius, no_iterations, scan_angle, no_detectors, height, width):
     # Prepare zeros array with the same size like picture
     result = np.zeros_like(picture, dtype=float)
+    mse_errors = np.zeros(no_iterations)
 
     # Angle per iteration, scan angle in radius
     angle_per_iteration = calculate_iterations_angle(no_iterations)
@@ -200,8 +201,11 @@ def reverse_sinogram(picture, sinogram, radius, no_iterations, scan_angle, no_de
         picture = cut_original_size(result, height, width)
         write_file("cut_" + str(iteration), picture)
 
-    # Return prepared image
-    return result
+        # Calculate MSE for iteration
+        mse_errors[iteration] = calculate_mse(original, picture)
+
+    # Return prepared image with MSE errors
+    return result, mse_errors
 
 
 def cut_original_size(picture, height, width):
@@ -227,22 +231,47 @@ def calculate_max_mse(picture):
     for row in picture:
         for value in row:
             # Calculate max distance for MSE - if color > 127 use 0, else use 255 as value (the largest distance)
-            max_mse += calculate_mse(value, 0 if value > 127 else 255)
+            max_mse += calculate_difference(value, 0 if value > 127 else 255)
 
     # Return max MSE value
     return math.sqrt(max_mse)
 
 
-def calculate_mse(original, check):
+def calculate_difference(original, check):
     # Calculate second power
     return math.pow(original - check, 2)
 
 
+def calculate_mse(original, result):
+    # MSE value
+    mse = 0.0
+
+    for i, row in enumerate(original):
+        for j, value in enumerate(row):
+            mse += calculate_difference(value, result[i][j])
+
+    # Return MSE value
+    return math.sqrt(mse)
+
+
+def prepare_mse_graph(max_mse, mse_errors):
+    # Axis x and y values
+    axis_x = np.arange(len(mse_errors))
+    axis_y = [math.ceil((error / max_mse) * 10_000)/100 for error in mse_errors]
+
+    plt.plot(axis_x, axis_y, color='red', marker='o', linestyle='None', markersize=2)
+    plt.title('MSE changes')
+    plt.xlabel('Iteration')
+    plt.ylabel('MSE [%]')
+    plt.ylim([0, 100])
+    plt.savefig('results/mse_graph.jpg')
+
+
 def main():
     # TODO move parameters as named program's parameters
-    detectors_counter = 10
-    scan_angle = 180
-    iterations = 1
+    detectors_counter = 4
+    scan_angle = 120
+    iterations = 3
 
     filename = "Files/Kwadraty2.jpg"
     file, height, width = read_file(filename)
@@ -250,10 +279,11 @@ def main():
 
     sinogram = make_sinogram(picture, radius, iterations, scan_angle, detectors_counter)
     write_file("sinogram", sinogram)
-    picture_from_reverse_sinogram = reverse_sinogram(picture, sinogram, radius, iterations, scan_angle, detectors_counter, height, width)
+    picture_from_reverse_sinogram, mse_errors = reverse_sinogram(file, picture, sinogram, radius, iterations, scan_angle, detectors_counter, height, width)
     write_file("reverse", picture_from_reverse_sinogram)
     max_mse = calculate_max_mse(file)
 
+    prepare_mse_graph(max_mse, mse_errors)
 
 if __name__ == "__main__":
     main()
@@ -272,10 +302,11 @@ if __name__ == "__main__":
     # * Reverse Radon transformation - from sinogram make picture [DONE]
     # * Return size of result to original from base picture [DONE]
     # * Calculate max MSE to proportions in formula [DONE]
+    # * Calculation MSE in percent (current / max_errors_possible) [DONE]
+    # * Save result to file with calculated MSE on it [DONE]
 
     # TODO
-    # * Calculation MSE in percent (current / max_errors_possible)
-    # * Save result to file with calculated MSE on it
+    # * Rewrite MSE to speed up function
     # * Convolve - own, not from library files
     # * Filtered sinogram
     # * Display mode - extra parameter to disable calculations and show only results
