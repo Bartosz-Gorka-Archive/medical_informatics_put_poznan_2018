@@ -202,8 +202,7 @@ def reverse_sinogram(original, picture, sinogram, radius, no_iterations, scan_an
         write_file("cut_" + str(iteration), picture)
 
         # Calculate MSE for iteration
-        # TODO enable
-        # mse_errors[iteration] = calculate_mse(original, picture)
+        mse_errors[iteration] = calculate_mse(original, picture)
 
     # Return prepared image with MSE errors
     return result, mse_errors
@@ -225,17 +224,21 @@ def cut_original_size(picture, height, width):
 
 
 def calculate_max_mse(picture):
+    # Fetch picture size
+    x, y = picture.shape
     # Max MSE
-    max_mse = 0.0
+    max_mse = np.empty(x * y)
 
     # Iterate over picture
+    index = 0
     for row in picture:
         for value in row:
             # Calculate max distance for MSE - if color > 127 use 0, else use 255 as value (the largest distance)
-            max_mse += calculate_difference(value, 0 if value > 127 else 255)
+            max_mse[index] = calculate_difference(value, 0 if value > 127 else 255)
+            index += 1
 
     # Return max MSE value
-    return math.sqrt(max_mse)
+    return math.sqrt(max_mse.mean())
 
 
 def calculate_difference(original, check):
@@ -245,17 +248,10 @@ def calculate_difference(original, check):
 
 def calculate_mse(original, result):
     # MSE value
-    mse = 0.0
-
-    # Flatten
-    flatten = result.flatten()
-
-    # Loop to calculate MSE value
-    for value, check in zip(original, flatten):
-        mse += calculate_difference(value, check)
+    mse = math.sqrt(np.power(np.subtract(original, result), 2).mean())
 
     # Return MSE value
-    return math.sqrt(mse)
+    return mse
 
 
 def prepare_mse_graph(max_mse, mse_errors):
@@ -333,7 +329,7 @@ def convolve(current_position, mask_inf_length, mask, row_inf_length, row):
 def main():
     # TODO move parameters as named program's parameters
     detectors_counter = 360
-    scan_angle = 120
+    scan_angle = 180
     iterations = 360
     mask_size = int(detectors_counter * 0.20) + 1
     filtered = True
@@ -345,17 +341,18 @@ def main():
     sinogram = make_sinogram(picture, radius, iterations, scan_angle, detectors_counter)
     write_file("sinogram", sinogram)
 
-    original = file.flatten()
     mask = prepare_ramlak_mask(mask_size)
 
     # If filtered - convolve sinogram and mask
     if filtered:
         sinogram = make_convolve(sinogram, mask)
 
-    picture_from_reverse_sinogram, mse_errors = reverse_sinogram(original, picture, sinogram, radius, iterations, scan_angle, detectors_counter, height, width)
+    picture_from_reverse_sinogram, mse_errors = reverse_sinogram(file, picture, sinogram, radius, iterations, scan_angle, detectors_counter, height, width)
     write_file("reverse", picture_from_reverse_sinogram)
-    # max_mse = calculate_max_mse(file)
-    # prepare_mse_graph(max_mse, mse_errors)
+    max_mse = calculate_max_mse(file)
+    prepare_mse_graph(max_mse, mse_errors)
+    print(max_mse)
+    print(mse_errors)
 
 
 if __name__ == "__main__":
@@ -380,9 +377,10 @@ if __name__ == "__main__":
     # * Calculate mask - Ram-Lak filter [DONE]
     # * Convolve - own, not from library files [DONE]
     # * Filtered sinogram [DONE]
+    # * Rewrite MSE to speed up function [DONE]
+    # * Check is correct MSE implementation [DONE]
 
     # TODO
     # * Display mode - extra parameter to disable calculations and show only results
     # * GUI
-    # * Rewrite MSE to speed up function
-    # * Check is correct MSE implementation
+
