@@ -202,7 +202,8 @@ def reverse_sinogram(original, picture, sinogram, radius, no_iterations, scan_an
         write_file("cut_" + str(iteration), picture)
 
         # Calculate MSE for iteration
-        mse_errors[iteration] = calculate_mse(original, picture)
+        # TODO enable
+        # mse_errors[iteration] = calculate_mse(original, picture)
 
     # Return prepared image with MSE errors
     return result, mse_errors
@@ -270,11 +271,72 @@ def prepare_mse_graph(max_mse, mse_errors):
     plt.savefig('results/mse_graph.jpg')
 
 
+def prepare_ramlak_mask(length):
+    # Empty array
+    mask = np.empty(length, dtype=float)
+
+    # Nominator constant part
+    nominator = (-4 / math.pow(np.pi, 2)) * 255
+
+    # Loop to prepare filter's values
+    for index in range(length):
+        if index % 2 == 0:
+            mask[index] = 0.0
+        else:
+            mask[index] = nominator / math.pow(index, 2)
+
+    # Set first value
+    mask[0] = 255
+
+    # Return prepared mask
+    return mask
+
+
+def make_convolve(sinogram, mask):
+    # Filtered sinogram
+    filtered = np.empty_like(sinogram)
+
+    # Top used variables
+    mask_inf_length = mask.size - 1
+    row_inf_length = sinogram[0].size - 1
+
+    # Loop to prepare convolve
+    for i, row in enumerate(sinogram):
+        for j, value in enumerate(row):
+            filtered[i][j] = convolve(j, mask_inf_length, mask, row_inf_length, sinogram[i])
+
+    # Return prepared, filtered sinogram
+    return filtered
+
+
+def convolve(current_position, mask_inf_length, mask, row_inf_length, row):
+    # Value in position
+    value = 0.0
+
+    # Calculate position
+    start = 0 if current_position - mask_inf_length <= 0 else current_position - mask_inf_length
+    end = row_inf_length if current_position + mask_inf_length > row_inf_length else current_position + mask_inf_length
+
+    # Calculate current center
+    current_center = int((end - start) / 2)
+
+    for index in range(start, end):
+        # Add value from sinogram x mask
+        value += mask[abs(current_center)] * row[index]
+        # Move current selected field in mask
+        current_center -= 1
+
+    # Return value in cell
+    return value
+
+
 def main():
     # TODO move parameters as named program's parameters
-    detectors_counter = 4
+    detectors_counter = 360
     scan_angle = 120
-    iterations = 3
+    iterations = 360
+    mask_size = int(detectors_counter * 0.20) + 1
+    filtered = True
 
     filename = "Files/Kwadraty2.jpg"
     file, height, width = read_file(filename)
@@ -284,11 +346,17 @@ def main():
     write_file("sinogram", sinogram)
 
     original = file.flatten()
+    mask = prepare_ramlak_mask(mask_size)
+
+    # If filtered - convolve sinogram and mask
+    if filtered:
+        sinogram = make_convolve(sinogram, mask)
+
     picture_from_reverse_sinogram, mse_errors = reverse_sinogram(original, picture, sinogram, radius, iterations, scan_angle, detectors_counter, height, width)
     write_file("reverse", picture_from_reverse_sinogram)
-    max_mse = calculate_max_mse(file)
+    # max_mse = calculate_max_mse(file)
+    # prepare_mse_graph(max_mse, mse_errors)
 
-    prepare_mse_graph(max_mse, mse_errors)
 
 if __name__ == "__main__":
     main()
@@ -309,10 +377,12 @@ if __name__ == "__main__":
     # * Calculate max MSE to proportions in formula [DONE]
     # * Calculation MSE in percent (current / max_errors_possible) [DONE]
     # * Save result to file with calculated MSE on it [DONE]
+    # * Calculate mask - Ram-Lak filter [DONE]
+    # * Convolve - own, not from library files [DONE]
+    # * Filtered sinogram [DONE]
 
     # TODO
-    # * Rewrite MSE to speed up function
-    # * Convolve - own, not from library files
-    # * Filtered sinogram
     # * Display mode - extra parameter to disable calculations and show only results
     # * GUI
+    # * Rewrite MSE to speed up function
+    # * Check is correct MSE implementation
