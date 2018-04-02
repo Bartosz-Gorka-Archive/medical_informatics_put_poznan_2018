@@ -169,7 +169,7 @@ def make_sinogram(picture, radius, no_iterations, scan_angle, no_detectors):
     return result
 
 
-def reverse_sinogram(picture, sinogram, radius, no_iterations, scan_angle, no_detectors):
+def reverse_sinogram(picture, sinogram, radius, no_iterations, scan_angle, no_detectors, height, width):
     # Prepare zeros array with the same size like picture
     result = np.zeros_like(picture, dtype=float)
 
@@ -195,8 +195,28 @@ def reverse_sinogram(picture, sinogram, radius, no_iterations, scan_angle, no_de
                 # Append values to image
                 result[position_x, position_y] += sinogram[iteration, index]
 
+        # Save iteration results
+        write_file("reverse_" + str(iteration), result)
+        picture = cut_original_size(result, height, width)
+        write_file("cut_" + str(iteration), picture)
+
     # Return prepared image
     return result
+
+
+def cut_original_size(picture, height, width):
+    # Calculation diagonal
+    diagonal = int(math.sqrt((height ** 2) + (width ** 2))) + 10
+
+    # Padding in view
+    padding_y = int((diagonal - height) / 2)
+    padding_x = int((diagonal - width) / 2)
+
+    # Cut original format from picture
+    cut_picture = picture[padding_y: padding_y + height, padding_x: padding_x + width].copy()
+
+    # Return cut picture
+    return cut_picture
 
 
 def main():
@@ -211,7 +231,7 @@ def main():
 
     sinogram = make_sinogram(picture, radius, iterations, scan_angle, detectors_counter)
     write_file("sinogram", sinogram)
-    picture_from_reverse_sinogram = reverse_sinogram(picture, sinogram, radius, iterations, scan_angle, detectors_counter)
+    picture_from_reverse_sinogram = reverse_sinogram(picture, sinogram, radius, iterations, scan_angle, detectors_counter, height, width)
     write_file("reverse", picture_from_reverse_sinogram)
 
 
@@ -230,9 +250,9 @@ if __name__ == "__main__":
     # * Normalize values in sinogram [DONE]
     # * Write sinogram to file [DONE]
     # * Reverse Radon transformation - from sinogram make picture [DONE]
+    # * Return size of result to original from base picture [DONE]
 
     # TODO
-    # * Return size of result to original from base picture
     # * Calculation MSE in percent (current / max_errors_possible)
     # * Save result to file with calculated MSE on it.
     # * Convolve - own, not from library files
