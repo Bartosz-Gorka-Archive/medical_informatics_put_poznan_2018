@@ -246,9 +246,12 @@ def calculate_mse(original, result):
     # MSE value
     mse = 0.0
 
-    for i, row in enumerate(original):
-        for j, value in enumerate(row):
-            mse += calculate_difference(value, result[i][j])
+    # Flatten
+    flatten = result.flatten()
+
+    # Loop to calculate MSE value
+    for value, check in zip(original, flatten):
+        mse += calculate_difference(value, check)
 
     # Return MSE value
     return math.sqrt(mse)
@@ -279,7 +282,9 @@ def main():
 
     sinogram = make_sinogram(picture, radius, iterations, scan_angle, detectors_counter)
     write_file("sinogram", sinogram)
-    picture_from_reverse_sinogram, mse_errors = reverse_sinogram(file, picture, sinogram, radius, iterations, scan_angle, detectors_counter, height, width)
+
+    original = file.flatten()
+    picture_from_reverse_sinogram, mse_errors = reverse_sinogram(original, picture, sinogram, radius, iterations, scan_angle, detectors_counter, height, width)
     write_file("reverse", picture_from_reverse_sinogram)
     max_mse = calculate_max_mse(file)
 
