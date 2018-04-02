@@ -21,7 +21,7 @@ def read_file(filename):
 
 def prepare_circle(file, height, width):
     # Calculation diagonal
-    diagonal = int(math.sqrt((height ** 2) + (width ** 2))) + 10
+    diagonal = int(math.sqrt(math.pow(height, 2) + math.pow(width, 2))) + 10
     # Append empty values outside the image
     image = np.zeros((diagonal, diagonal), dtype=np.uint8)
 
@@ -206,7 +206,7 @@ def reverse_sinogram(picture, sinogram, radius, no_iterations, scan_angle, no_de
 
 def cut_original_size(picture, height, width):
     # Calculation diagonal
-    diagonal = int(math.sqrt((height ** 2) + (width ** 2))) + 10
+    diagonal = int(math.sqrt(math.pow(height, 2) + math.pow(width, 2))) + 10
 
     # Padding in view
     padding_y = int((diagonal - height) / 2)
@@ -219,11 +219,30 @@ def cut_original_size(picture, height, width):
     return cut_picture
 
 
+def calculate_max_mse(picture):
+    # Max MSE
+    max_mse = 0.0
+
+    # Iterate over picture
+    for row in picture:
+        for value in row:
+            # Calculate max distance for MSE - if color > 127 use 0, else use 255 as value (the largest distance)
+            max_mse += calculate_mse(value, 0 if value > 127 else 255)
+
+    # Return max MSE value
+    return math.sqrt(max_mse)
+
+
+def calculate_mse(original, check):
+    # Calculate second power
+    return math.pow(original - check, 2)
+
+
 def main():
     # TODO move parameters as named program's parameters
-    detectors_counter = 100
+    detectors_counter = 10
     scan_angle = 180
-    iterations = 100
+    iterations = 1
 
     filename = "Files/Kwadraty2.jpg"
     file, height, width = read_file(filename)
@@ -233,6 +252,7 @@ def main():
     write_file("sinogram", sinogram)
     picture_from_reverse_sinogram = reverse_sinogram(picture, sinogram, radius, iterations, scan_angle, detectors_counter, height, width)
     write_file("reverse", picture_from_reverse_sinogram)
+    max_mse = calculate_max_mse(file)
 
 
 if __name__ == "__main__":
@@ -251,10 +271,11 @@ if __name__ == "__main__":
     # * Write sinogram to file [DONE]
     # * Reverse Radon transformation - from sinogram make picture [DONE]
     # * Return size of result to original from base picture [DONE]
+    # * Calculate max MSE to proportions in formula [DONE]
 
     # TODO
     # * Calculation MSE in percent (current / max_errors_possible)
-    # * Save result to file with calculated MSE on it.
+    # * Save result to file with calculated MSE on it
     # * Convolve - own, not from library files
     # * Filtered sinogram
     # * Display mode - extra parameter to disable calculations and show only results
