@@ -1,8 +1,15 @@
+# Core imports
 import cv2
 import math
 import numpy as np
 import matplotlib.pyplot as plt
 from bresenham import bresenham
+
+# GUI imports
+import sys
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import Qt
 
 
 # TODO debug values
@@ -325,38 +332,247 @@ def convolve(current_position, mask_inf_length, mask, row_inf_length, row):
     # Return value in cell
     return value
 
+# def main():
+#     # TODO move parameters as named program's parameters
+#     detectors_counter = 360
+#     scan_angle = 180
+#     iterations = 360
+#     mask_size = int(detectors_counter * 0.20) + 1
+#     filtered = True
+#
+#     filename = "Files/Kwadraty2.jpg"
+#     file, height, width = read_file(filename)
+#     picture, radius = prepare_circle(file, height, width)
+#
+#     sinogram = make_sinogram(picture, radius, iterations, scan_angle, detectors_counter)
+#     write_file("sinogram", sinogram)
+#
+#     mask = prepare_ramlak_mask(mask_size)
+#
+#     # If filtered - convolve sinogram and mask
+#     if filtered:
+#         sinogram = make_convolve(sinogram, mask)
+#
+#     picture_from_reverse_sinogram, mse_errors = reverse_sinogram(file, picture, sinogram, radius, iterations, scan_angle, detectors_counter, height, width)
+#     write_file("reverse", picture_from_reverse_sinogram)
+#     max_mse = calculate_max_mse(file)
+#     prepare_mse_graph(max_mse, mse_errors)
+#     print(max_mse)
+#     print(mse_errors)
+
+class Tomography(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        # Variables
+        self.filter_enable = False
+        self.mse_enable = False
+        self.selected_file = None
+
+        # Top used objects
+        self.input_detectors = QLineEdit(self)
+        self.no_iterations_input = QLineEdit(self)
+        self.scan_angle_input = QLineEdit(self)
+        self.selected_iteration_input = QLineEdit(self)
+        self.checkbox_filter = QCheckBox('Enable filter', self)
+        self.mse_checkbox = QCheckBox('Calculate MSE', self)
+        self.button_read_file = QPushButton('Select file', self)
+        self.button_run_code = QPushButton('Run tomography', self)
+        self.button_run_again = QPushButton('Clear && enable again', self)
+        self.button_show_mse = QPushButton('Show MSE graph', self)
+        self.button_show_selected = QPushButton('Show selected iteration', self)
+
+        # Actions
+        self.checkbox_filter.stateChanged.connect(lambda: self.filter_change())
+        self.mse_checkbox.stateChanged.connect(lambda: self.mse_change())
+        self.button_read_file.clicked.connect(lambda: self.select_file())
+
+        # Init UI
+        self.init_ui()
+
+    def init_ui(self):
+        self.resize(880, 680)
+        self.center()
+        self.setWindowTitle('Tomography simulation')
+
+        # First image label
+        label_original_picture = QLabel(self)
+        label_original_picture.setText('Original picture')
+        label_original_picture.move(15, 10)
+
+        # First image - original picture
+        original_picture_basic = QLabel(self)
+        original_picture_basic.move(15, 30)
+        original_picture_basic.resize(300, 300)
+        original_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
+
+        # Sinogram image label
+        label_sinogram_picture = QLabel(self)
+        label_sinogram_picture.setText('Sinogram')
+        label_sinogram_picture.move(335, 10)
+
+        # Sinogram base image
+        sinogram_picture_basic = QLabel(self)
+        sinogram_picture_basic.move(330, 30)
+        sinogram_picture_basic.resize(300, 300)
+        sinogram_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
+
+        # Reverse image label
+        label_reverse_picture = QLabel(self)
+        label_reverse_picture.setText('Reverse image')
+        label_reverse_picture.move(15, 340)
+
+        # Reverse image - original picture
+        reverse_picture_basic = QLabel(self)
+        reverse_picture_basic.move(15, 360)
+        reverse_picture_basic.resize(300, 300)
+        reverse_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
+
+        # Selected image label
+        label_selected_picture = QLabel(self)
+        label_selected_picture.setText('Selected step image')
+        label_selected_picture.move(335, 340)
+
+        # Selected image - original picture
+        selected_picture_basic = QLabel(self)
+        selected_picture_basic.move(330, 360)
+        selected_picture_basic.resize(300, 300)
+        selected_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
+
+        # Settings label
+        bold_font = QFont()
+        bold_font.setBold(True)
+        label_project_settings = QLabel(self)
+        label_project_settings.setText('Project settings')
+        label_project_settings.move(670, 10)
+        label_project_settings.setFont(bold_font)
+
+        # No detectors label
+        no_detectors_label = QLabel(self)
+        no_detectors_label.setText('Number of detectors')
+        no_detectors_label.move(670, 30)
+
+        # No detectors input
+        self.input_detectors.setValidator(QIntValidator())
+        self.input_detectors.setMaxLength(4)
+        self.input_detectors.setPlaceholderText('No. detectors')
+        self.input_detectors.setAlignment(Qt.AlignCenter)
+        self.input_detectors.resize(180, 24)
+        self.input_detectors.setFocus()
+        self.input_detectors.move(670, 50)
+
+        # No detectors label
+        no_iterations_label = QLabel(self)
+        no_iterations_label.setText('Number of iterations')
+        no_iterations_label.move(670, 80)
+
+        # No iterations input
+        self.no_iterations_input.setValidator(QIntValidator())
+        self.no_iterations_input.setMaxLength(4)
+        self.no_iterations_input.setPlaceholderText('No. iterations')
+        self.no_iterations_input.setAlignment(Qt.AlignCenter)
+        self.no_iterations_input.resize(180, 24)
+        self.no_iterations_input.setFocus()
+        self.no_iterations_input.move(670, 100)
+
+        # No detectors label
+        scan_angle_label = QLabel(self)
+        scan_angle_label.setText('Scan angle in degrees')
+        scan_angle_label.move(670, 130)
+
+        # No iterations input
+        self.scan_angle_input.setValidator(QIntValidator())
+        self.scan_angle_input.setMaxLength(3)
+        self.scan_angle_input.setPlaceholderText('Scan angle')
+        self.scan_angle_input.setAlignment(Qt.AlignCenter)
+        self.scan_angle_input.resize(180, 24)
+        self.scan_angle_input.setFocus()
+        self.scan_angle_input.move(670, 150)
+
+        # Disable filter checkbox
+        self.checkbox_filter.setChecked(False)
+        self.checkbox_filter.move(670, 180)
+
+        # MSE checkbox
+        self.mse_checkbox.setChecked(False)
+        self.mse_checkbox.move(670, 200)
+
+        # Button read file
+        self.button_read_file.resize(190, 35)
+        self.button_read_file.move(670, 220)
+
+        # Button run code
+        self.button_run_code.setDisabled(True)
+        self.button_run_code.resize(190, 35)
+        self.button_run_code.move(670, 250)
+
+        # Button again
+        self.button_run_again.setDisabled(True)
+        self.button_run_again.resize(190, 35)
+        self.button_run_again.move(670, 280)
+
+        # Label selected iteration
+        label_selected_iteration = QLabel(self)
+        label_selected_iteration.setText('Select iteration to view')
+        label_selected_iteration.move(670, 360)
+
+        # Selected iteration input
+        self.selected_iteration_input.setValidator(QIntValidator())
+        self.selected_iteration_input.setMaxLength(4)
+        self.selected_iteration_input.setPlaceholderText('Selected iteration number')
+        self.selected_iteration_input.setAlignment(Qt.AlignCenter)
+        self.selected_iteration_input.resize(180, 24)
+        self.selected_iteration_input.setFocus()
+        self.selected_iteration_input.move(670, 380)
+
+        # Button show selected iteration
+        self.button_show_selected.setDisabled(True)
+        self.button_show_selected.resize(190, 35)
+        self.button_show_selected.move(670, 410)
+
+        # Button show MSE
+        self.button_show_mse.setDisabled(True)
+        self.button_show_mse.resize(190, 35)
+        self.button_show_mse.move(670, 440)
+
+        # Show UI
+        self.show()
+
+    def center(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+
+    def filter_change(self):
+        self.filter_enable = self.checkbox_filter.isChecked()
+
+    def mse_change(self):
+        self.mse_enable = self.mse_checkbox.isChecked()
+
+    def select_file(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        file_name, _ = QFileDialog.getOpenFileName(self, "QFileDialog.getOpenFileName()", "",
+                                                   "JPG files (*jpg);;DICOM files (*.dicom)", options=options)
+        if file_name:
+            self.selected_file = file_name
+            self.button_read_file.setText('Selected file')
+
 
 def main():
-    # TODO move parameters as named program's parameters
-    detectors_counter = 360
-    scan_angle = 180
-    iterations = 360
-    mask_size = int(detectors_counter * 0.20) + 1
-    filtered = True
-
-    filename = "Files/Kwadraty2.jpg"
-    file, height, width = read_file(filename)
-    picture, radius = prepare_circle(file, height, width)
-
-    sinogram = make_sinogram(picture, radius, iterations, scan_angle, detectors_counter)
-    write_file("sinogram", sinogram)
-
-    mask = prepare_ramlak_mask(mask_size)
-
-    # If filtered - convolve sinogram and mask
-    if filtered:
-        sinogram = make_convolve(sinogram, mask)
-
-    picture_from_reverse_sinogram, mse_errors = reverse_sinogram(file, picture, sinogram, radius, iterations, scan_angle, detectors_counter, height, width)
-    write_file("reverse", picture_from_reverse_sinogram)
-    max_mse = calculate_max_mse(file)
-    prepare_mse_graph(max_mse, mse_errors)
-    print(max_mse)
-    print(mse_errors)
+    app = QApplication(sys.argv)
+    ex = Tomography()
+    sys.exit(app.exec_())
 
 
 if __name__ == "__main__":
     main()
+
+    # TODO - GUI
+    # * [Optional] Progress bar
+    # *
+    # *
 
     # Prepared in code
     # * Read file [DONE]
@@ -379,8 +595,6 @@ if __name__ == "__main__":
     # * Filtered sinogram [DONE]
     # * Rewrite MSE to speed up function [DONE]
     # * Check is correct MSE implementation [DONE]
-
-    # TODO
-    # * Display mode - extra parameter to disable calculations and show only results
-    # * GUI
+    # * Display mode - extra parameter to disable calculations and show only results [DONE]
+    # * GUI [DONE]
 
