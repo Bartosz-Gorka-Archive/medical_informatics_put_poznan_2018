@@ -12,11 +12,6 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import Qt
 
 
-# TODO debug values
-debug = True
-images = False
-
-
 def read_file(filename):
     # Read file in gray scale
     file = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
@@ -42,15 +37,7 @@ def prepare_circle(file, height, width):
     # Calculation radius
     radius = int(diagonal / 2)
 
-    # Draw circle
-    if debug:
-        center = (int(diagonal / 2), int(diagonal / 2))
-        cv2.circle(image, center, radius, 100)
-
-    if images:
-        plt.imshow(image)
-        plt.show()
-
+    # Return calculations
     return image, radius
 
 
@@ -360,6 +347,7 @@ def convolve(current_position, mask_inf_length, mask, row_inf_length, row):
 #     print(max_mse)
 #     print(mse_errors)
 
+
 class Tomography(QWidget):
     def __init__(self):
         super().__init__()
@@ -368,12 +356,26 @@ class Tomography(QWidget):
         self.filter_enable = False
         self.mse_enable = False
         self.selected_file = None
+        self.already_show_mse = False
+        self.no_detectors = 0
+        self.iterations = 0
+        self.scan_angle = 0
+        self.selected_iteration = 0
 
         # Top used objects
         self.input_detectors = QLineEdit(self)
         self.no_iterations_input = QLineEdit(self)
         self.scan_angle_input = QLineEdit(self)
         self.selected_iteration_input = QLineEdit(self)
+        self.mse_graph = QLabel(self)
+        self.label_original_picture = QLabel(self)
+        self.original_picture_basic = QLabel(self)
+        self.label_sinogram_picture = QLabel(self)
+        self.sinogram_picture_basic = QLabel(self)
+        self.selected_picture_basic = QLabel(self)
+        self.label_reverse_picture = QLabel(self)
+        self.reverse_picture_basic = QLabel(self)
+        self.label_selected_picture = QLabel(self)
         self.checkbox_filter = QCheckBox('Enable filter', self)
         self.mse_checkbox = QCheckBox('Calculate MSE', self)
         self.button_read_file = QPushButton('Select file', self)
@@ -386,6 +388,8 @@ class Tomography(QWidget):
         self.checkbox_filter.stateChanged.connect(lambda: self.filter_change())
         self.mse_checkbox.stateChanged.connect(lambda: self.mse_change())
         self.button_read_file.clicked.connect(lambda: self.select_file())
+        self.button_run_code.clicked.connect(lambda: self.run_code())
+        self.button_show_mse.clicked.connect(lambda: self.show_mse_graph())
 
         # Init UI
         self.init_ui()
@@ -395,49 +399,47 @@ class Tomography(QWidget):
         self.center()
         self.setWindowTitle('Tomography simulation')
 
+        # MSE graph
+        self.mse_graph.move(10, 80)
+        self.mse_graph.resize(640, 480)
+        self.mse_graph.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(480, 640, Qt.KeepAspectRatio))
+        self.mse_graph.setVisible(False)
+
         # First image label
-        label_original_picture = QLabel(self)
-        label_original_picture.setText('Original picture')
-        label_original_picture.move(15, 10)
+        self.label_original_picture.setText('Original picture')
+        self.label_original_picture.move(15, 10)
 
         # First image - original picture
-        original_picture_basic = QLabel(self)
-        original_picture_basic.move(15, 30)
-        original_picture_basic.resize(300, 300)
-        original_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
+        self.original_picture_basic.move(15, 30)
+        self.original_picture_basic.resize(300, 300)
+        self.original_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
 
         # Sinogram image label
-        label_sinogram_picture = QLabel(self)
-        label_sinogram_picture.setText('Sinogram')
-        label_sinogram_picture.move(335, 10)
+        self.label_sinogram_picture.setText('Sinogram')
+        self.label_sinogram_picture.move(335, 10)
 
         # Sinogram base image
-        sinogram_picture_basic = QLabel(self)
-        sinogram_picture_basic.move(330, 30)
-        sinogram_picture_basic.resize(300, 300)
-        sinogram_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
+        self.sinogram_picture_basic.move(330, 30)
+        self.sinogram_picture_basic.resize(300, 300)
+        self.sinogram_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
 
         # Reverse image label
-        label_reverse_picture = QLabel(self)
-        label_reverse_picture.setText('Reverse image')
-        label_reverse_picture.move(15, 340)
+        self.label_reverse_picture.setText('Reverse image')
+        self.label_reverse_picture.move(15, 340)
 
         # Reverse image - original picture
-        reverse_picture_basic = QLabel(self)
-        reverse_picture_basic.move(15, 360)
-        reverse_picture_basic.resize(300, 300)
-        reverse_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
+        self.reverse_picture_basic.move(15, 360)
+        self.reverse_picture_basic.resize(300, 300)
+        self.reverse_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
 
         # Selected image label
-        label_selected_picture = QLabel(self)
-        label_selected_picture.setText('Selected step image')
-        label_selected_picture.move(335, 340)
+        self.label_selected_picture.setText('Selected step image')
+        self.label_selected_picture.move(335, 340)
 
         # Selected image - original picture
-        selected_picture_basic = QLabel(self)
-        selected_picture_basic.move(330, 360)
-        selected_picture_basic.resize(300, 300)
-        selected_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
+        self.selected_picture_basic.move(330, 360)
+        self.selected_picture_basic.resize(300, 300)
+        self.selected_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
 
         # Settings label
         bold_font = QFont()
@@ -558,6 +560,65 @@ class Tomography(QWidget):
         if file_name:
             self.selected_file = file_name
             self.button_read_file.setText('Selected file')
+            self.button_run_code.setDisabled(False)
+
+    def validate_detectors(self):
+        self.no_detectors = string_to_int(self.input_detectors.text())
+        if self.no_detectors > 1:
+            return True
+        else:
+            return False
+
+    def validate_iterations(self):
+        self.iterations = string_to_int(self.no_iterations_input.text())
+        if self.iterations > 0:
+            return True
+        else:
+            return False
+
+    def validate_selected_iterations(self):
+        self.selected_iteration = string_to_int(self.selected_iteration_input.text())
+        if 0 < self.selected_iteration <= self.iterations:
+            return True
+        else:
+            return False
+
+    def validate_scan_angle(self):
+        self.scan_angle = string_to_int(self.scan_angle_input.text())
+        if 0 < self.scan_angle < 360:
+            return True
+        else:
+            return False
+
+    def show_mse_graph(self):
+        # Enabled MSE calculations - toggle image
+        if self.mse_enable:
+            status = self.already_show_mse
+            self.already_show_mse = not self.already_show_mse
+        else:
+            status = True
+
+        self.mse_graph.setVisible(not status)
+        self.mse_graph.setPixmap(QPixmap('results/mse_graph.jpg').scaled(640, 480, Qt.KeepAspectRatio))
+        self.label_original_picture.setVisible(status)
+        self.original_picture_basic.setVisible(status)
+        self.label_sinogram_picture.setVisible(status)
+        self.sinogram_picture_basic.setVisible(status)
+        self.selected_picture_basic.setVisible(status)
+        self.label_reverse_picture.setVisible(status)
+        self.reverse_picture_basic.setVisible(status)
+        self.label_selected_picture.setVisible(status)
+
+    def run_code(self):
+        if self.validate_detectors() and self.validate_iterations() and self.validate_scan_angle():
+            print('Correct')
+
+
+def string_to_int(text):
+    if text == '':
+        return 0
+    else:
+        return int(text)
 
 
 def main():
@@ -569,10 +630,19 @@ def main():
 if __name__ == "__main__":
     main()
 
+    # Done
+    # * Validate scan angle [DONE]
+    # * Validate iterations [DONE]
+    # * Validate detectors [DONE]
+    # * Validate selected iteration [DONE]
+    # * Show MSE graph [DONE]
+
     # TODO - GUI
     # * [Optional] Progress bar
-    # *
-    # *
+    # * Show selected iteration image
+    # * Show selected image
+    # * Show sinogram
+    # * Show reverse picture
 
     # Prepared in code
     # * Read file [DONE]
@@ -597,4 +667,3 @@ if __name__ == "__main__":
     # * Check is correct MSE implementation [DONE]
     # * Display mode - extra parameter to disable calculations and show only results [DONE]
     # * GUI [DONE]
-
