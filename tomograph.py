@@ -608,6 +608,19 @@ class Tomography(QWidget):
         self.reverse_picture_basic.setVisible(status)
         self.label_selected_picture.setVisible(status)
 
+    def show_selected_image(self, original):
+        if original:
+            self.selected_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
+        else:
+            number = self.selected_iteration - 1
+            self.selected_picture_basic.setPixmap(QPixmap('results/cut_' + str(number) + '.jpg').scaled(300, 300, Qt.KeepAspectRatio))
+
+    def show_selected_file(self, original):
+        if original:
+            self.original_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
+        else:
+            self.original_picture_basic.setPixmap(QPixmap(self.selected_file).scaled(300, 300, Qt.KeepAspectRatio))
+
     def show_sinogram(self, original):
         if original:
             self.sinogram_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
@@ -650,11 +663,11 @@ if __name__ == "__main__":
     # * Show MSE graph [DONE]
     # * Show sinogram [DONE]
     # * Show reverse picture [DONE]
+    # * Show selected image [DONE]
+    # * Show selected iteration image [DONE]
 
     # TODO - GUI
     # * [Optional] Progress bar
-    # * Show selected iteration image
-    # * Show selected image
 
     # Prepared in code
     # * Read file [DONE]
