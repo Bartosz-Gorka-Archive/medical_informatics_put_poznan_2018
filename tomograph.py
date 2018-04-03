@@ -1,4 +1,5 @@
 # Core imports
+import os
 import cv2
 import math
 import numpy as np
@@ -163,7 +164,7 @@ def make_sinogram(picture, radius, no_iterations, scan_angle, no_detectors):
     return result
 
 
-def reverse_sinogram(original, picture, sinogram, radius, no_iterations, scan_angle, no_detectors, height, width):
+def reverse_sinogram(mse_enabled, original, picture, sinogram, radius, no_iterations, scan_angle, no_detectors, height, width):
     # Prepare zeros array with the same size like picture
     result = np.zeros_like(picture, dtype=float)
     mse_errors = np.zeros(no_iterations)
@@ -195,7 +196,8 @@ def reverse_sinogram(original, picture, sinogram, radius, no_iterations, scan_an
         write_file("cut_" + str(iteration), picture)
 
         # Calculate MSE for iteration
-        mse_errors[iteration] = calculate_mse(original, picture)
+        if mse_enabled:
+            mse_errors[iteration] = calculate_mse(original, picture)
 
     # Return prepared image with MSE errors
     return result, mse_errors
@@ -258,6 +260,7 @@ def prepare_mse_graph(max_mse, mse_errors):
     plt.ylabel('MSE [%]')
     plt.ylim([0, 100])
     plt.savefig('results/mse_graph.jpg')
+    plt.gcf().clear()
 
 
 def prepare_ramlak_mask(length):
@@ -318,40 +321,14 @@ def convolve(current_position, mask_inf_length, mask, row_inf_length, row):
     # Return value in cell
     return value
 
-# def main():
-#     # TODO move parameters as named program's parameters
-#     detectors_counter = 360
-#     scan_angle = 180
-#     iterations = 360
-#     mask_size = int(detectors_counter * 0.20) + 1
-#     filtered = True
-#
-#     filename = "Files/Kwadraty2.jpg"
-#     file, height, width = read_file(filename)
-#     picture, radius = prepare_circle(file, height, width)
-#
-#     sinogram = make_sinogram(picture, radius, iterations, scan_angle, detectors_counter)
-#     write_file("sinogram", sinogram)
-#
-#     mask = prepare_ramlak_mask(mask_size)
-#
-#     # If filtered - convolve sinogram and mask
-#     if filtered:
-#         sinogram = make_convolve(sinogram, mask)
-#
-#     picture_from_reverse_sinogram, mse_errors = reverse_sinogram(file, picture, sinogram, radius, iterations, scan_angle, detectors_counter, height, width)
-#     write_file("reverse", picture_from_reverse_sinogram)
-#     max_mse = calculate_max_mse(file)
-#     prepare_mse_graph(max_mse, mse_errors)
-#     print(max_mse)
-#     print(mse_errors)
-
 
 class Tomography(QWidget):
     def __init__(self):
         super().__init__()
 
         # Variables
+        self.debug = True
+        self.mask_percent = 0.20
         self.filter_enable = False
         self.mse_enable = False
         self.selected_file = None
@@ -389,6 +366,8 @@ class Tomography(QWidget):
         self.button_read_file.clicked.connect(lambda: self.select_file())
         self.button_run_code.clicked.connect(lambda: self.run_code())
         self.button_show_mse.clicked.connect(lambda: self.show_mse_graph())
+        self.button_run_again.clicked.connect(lambda: self.run_again())
+        self.button_show_selected.clicked.connect(lambda: self.show_cut_file())
 
         # Init UI
         self.init_ui()
@@ -634,9 +613,108 @@ class Tomography(QWidget):
             number = self.iterations - 1
             self.reverse_picture_basic.setPixmap(QPixmap('results/cut_' + str(number) + '.jpg').scaled(300, 300, Qt.KeepAspectRatio))
 
+    def show_cut_file(self):
+        if self.validate_selected_iterations():
+            self.show_selected_image(False)
+        else:
+            print('Errors with parameters')
+
+    def run_again(self):
+        # Block button
+        self.button_run_again.setDisabled(True)
+
+        # Show again base pictures
+        self.show_sinogram(True)
+        self.show_selected_file(True)
+        self.show_selected_image(True)
+        self.show_reverse_image(True)
+
+        # Read file button to default settings
+        self.button_read_file.setText('Select file')
+        self.button_read_file.setDisabled(False)
+
+        # Unblock checkbox
+        self.mse_checkbox.setDisabled(False)
+        self.checkbox_filter.setDisabled(False)
+
+        # Block iterations options
+        self.button_show_mse.setDisabled(True)
+        self.button_show_selected.setDisabled(True)
+
     def run_code(self):
         if self.validate_detectors() and self.validate_iterations() and self.validate_scan_angle():
-            print('Correct')
+            # Block actions
+            self.button_run_code.setDisabled(True)
+            self.button_run_code.setText('In progress ...')
+            self.button_read_file.setDisabled(True)
+            self.mse_checkbox.setDisabled(True)
+            self.checkbox_filter.setDisabled(True)
+
+            if self.debug:
+                print('Settings')
+
+            # Clear results
+            ensure_exists_results_dir()
+            clear_results()
+
+            if self.debug:
+                print('Clear & Check')
+
+            # Make program
+            file, height, width = read_file(self.selected_file)
+            picture, radius = prepare_circle(file, height, width)
+
+            if self.debug:
+                print('Read & circle')
+
+            # Show original picture
+            self.show_selected_file(False)
+
+            # Make base sinogram
+            sinogram = make_sinogram(picture, radius, self.iterations, self.scan_angle, self.no_detectors)
+
+            if self.debug:
+                print('Sinogram')
+
+            # Write sinogram to file
+            write_file("sinogram", sinogram)
+
+            # Show sinogram in program
+            self.show_sinogram(False)
+
+            # If filtered - apply filter
+            if self.filter_enable:
+                mask_size = int(self.no_detectors * self.mask_percent) + 1
+                mask = prepare_ramlak_mask(mask_size)
+                sinogram = make_convolve(sinogram, mask)
+
+                if self.debug:
+                    print('Filter')
+
+            # Make reverse images and calculate MSE if enabled
+            picture_from_reverse_sinogram, mse_errors = reverse_sinogram(self.mse_enable, file, picture, sinogram, radius, self.iterations, self.scan_angle, self.no_detectors, height, width)
+
+            if self.debug:
+                print('Reverse')
+
+            # Show final
+            self.show_reverse_image(False)
+
+            # Operations on MSE
+            if self.mse_enable:
+                self.button_show_mse.setDisabled(False)
+                max_mse = calculate_max_mse(file)
+                prepare_mse_graph(max_mse, mse_errors)
+
+                if self.debug:
+                    print('MSE')
+
+            # End
+            self.button_show_selected.setDisabled(False)
+            self.button_run_again.setDisabled(False)
+            self.button_run_code.setText('Run tomography')
+        else:
+            print('Errors with parameters')
 
 
 def string_to_int(text):
@@ -644,6 +722,17 @@ def string_to_int(text):
         return 0
     else:
         return int(text)
+
+
+def ensure_exists_results_dir():
+    if not os.path.exists('results'):
+        os.makedirs('results')
+
+
+def clear_results():
+    file_list = [f for f in os.listdir('results')]
+    for f in file_list:
+        os.remove(os.path.join('results', f))
 
 
 def main():
