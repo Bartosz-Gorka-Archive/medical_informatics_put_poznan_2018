@@ -191,7 +191,6 @@ def reverse_sinogram(original, picture, sinogram, radius, no_iterations, scan_an
                 result[position_x, position_y] += sinogram[iteration, index]
 
         # Save iteration results
-        write_file("reverse_" + str(iteration), result)
         picture = cut_original_size(result, height, width)
         write_file("cut_" + str(iteration), picture)
 
@@ -609,6 +608,19 @@ class Tomography(QWidget):
         self.reverse_picture_basic.setVisible(status)
         self.label_selected_picture.setVisible(status)
 
+    def show_sinogram(self, original):
+        if original:
+            self.sinogram_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
+        else:
+            self.sinogram_picture_basic.setPixmap(QPixmap('results/sinogram.jpg').scaled(300, 300, Qt.KeepAspectRatio))
+
+    def show_reverse_image(self, original):
+        if original:
+            self.reverse_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
+        else:
+            number = self.iterations - 1
+            self.reverse_picture_basic.setPixmap(QPixmap('results/cut_' + str(number) + '.jpg').scaled(300, 300, Qt.KeepAspectRatio))
+
     def run_code(self):
         if self.validate_detectors() and self.validate_iterations() and self.validate_scan_angle():
             print('Correct')
@@ -636,13 +648,13 @@ if __name__ == "__main__":
     # * Validate detectors [DONE]
     # * Validate selected iteration [DONE]
     # * Show MSE graph [DONE]
+    # * Show sinogram [DONE]
+    # * Show reverse picture [DONE]
 
     # TODO - GUI
     # * [Optional] Progress bar
     # * Show selected iteration image
     # * Show selected image
-    # * Show sinogram
-    # * Show reverse picture
 
     # Prepared in code
     # * Read file [DONE]
