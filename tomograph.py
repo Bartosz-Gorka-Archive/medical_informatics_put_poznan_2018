@@ -1,10 +1,19 @@
 # Core imports
 import os
 import cv2
+import time
 import math
+import pydicom
+import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 from bresenham import bresenham
+from timeit import default_timer as timer
+from pydicom.uid import ImplicitVRLittleEndian
+from pydicom.dataset import Dataset, FileDataset
+
+
+from pydicom.data import get_testdata_files
 
 # GUI imports
 import sys
@@ -24,7 +33,7 @@ def read_file(filename):
 
 def prepare_circle(file, height, width):
     # Calculation diagonal
-    diagonal = int(math.sqrt(math.pow(height, 2) + math.pow(width, 2))) + 10
+    diagonal = int(math.sqrt(math.pow(height, 2) + math.pow(width, 2)))
     # Append empty values outside the image
     image = np.zeros((diagonal, diagonal), dtype=np.uint8)
 
@@ -337,6 +346,10 @@ class Tomography(QWidget):
         self.iterations = 0
         self.scan_angle = 0
         self.selected_iteration = 0
+        self.patient_name = ""
+        self.patient_id = ""
+        self.dicom_date = ""
+        self.save_as_dicom = False
 
         # Top used objects
         self.input_detectors = QLineEdit(self)
@@ -352,8 +365,12 @@ class Tomography(QWidget):
         self.label_reverse_picture = QLabel(self)
         self.reverse_picture_basic = QLabel(self)
         self.label_selected_picture = QLabel(self)
+        self.dicom_date_input = QDateEdit(self)
+        self.patient_name_input = QLineEdit(self)
+        self.patient_id_input = QLineEdit(self)
         self.checkbox_filter = QCheckBox('Enable filter', self)
         self.mse_checkbox = QCheckBox('Calculate MSE', self)
+        self.save_dicom_checkbox = QCheckBox('Save result as DICOM', self)
         self.button_read_file = QPushButton('Select file', self)
         self.button_run_code = QPushButton('Run tomography', self)
         self.button_run_again = QPushButton('Clear && enable again', self)
@@ -368,6 +385,7 @@ class Tomography(QWidget):
         self.button_show_mse.clicked.connect(lambda: self.show_mse_graph())
         self.button_run_again.clicked.connect(lambda: self.run_again())
         self.button_show_selected.clicked.connect(lambda: self.show_cut_file())
+        self.save_dicom_checkbox.stateChanged.connect(lambda: self.save_dicom_change())
 
         # Init UI
         self.init_ui()
@@ -479,22 +497,43 @@ class Tomography(QWidget):
 
         # Button read file
         self.button_read_file.resize(190, 35)
-        self.button_read_file.move(670, 220)
+        self.button_read_file.move(665, 220)
 
         # Button run code
         self.button_run_code.setDisabled(True)
         self.button_run_code.resize(190, 35)
-        self.button_run_code.move(670, 250)
+        self.button_run_code.move(665, 250)
 
         # Button again
         self.button_run_again.setDisabled(True)
         self.button_run_again.resize(190, 35)
-        self.button_run_again.move(670, 280)
+        self.button_run_again.move(665, 280)
+
+        # Input dicom date
+        self.dicom_date_input.resize(180, 24)
+        self.dicom_date_input.move(670, 320)
+        self.dicom_date_input.setAlignment(Qt.AlignCenter)
+
+        # Input patient ID
+        self.patient_id_input.resize(180, 24)
+        self.patient_id_input.move(670, 350)
+        self.patient_id_input.setMaxLength(255)
+        self.patient_id_input.setPlaceholderText('Patient ID')
+        self.patient_id_input.setFocus()
+        self.patient_id_input.setAlignment(Qt.AlignCenter)
+
+        # Input patient name
+        self.patient_name_input.resize(180, 24)
+        self.patient_name_input.move(670, 380)
+        self.patient_name_input.setMaxLength(255)
+        self.patient_name_input.setPlaceholderText('Patient name')
+        self.patient_name_input.setFocus()
+        self.patient_name_input.setAlignment(Qt.AlignCenter)
 
         # Label selected iteration
         label_selected_iteration = QLabel(self)
         label_selected_iteration.setText('Select iteration to view')
-        label_selected_iteration.move(670, 360)
+        label_selected_iteration.move(670, 430)
 
         # Selected iteration input
         self.selected_iteration_input.setValidator(QIntValidator())
@@ -503,17 +542,21 @@ class Tomography(QWidget):
         self.selected_iteration_input.setAlignment(Qt.AlignCenter)
         self.selected_iteration_input.resize(180, 24)
         self.selected_iteration_input.setFocus()
-        self.selected_iteration_input.move(670, 380)
+        self.selected_iteration_input.move(670, 450)
 
         # Button show selected iteration
         self.button_show_selected.setDisabled(True)
         self.button_show_selected.resize(190, 35)
-        self.button_show_selected.move(670, 410)
+        self.button_show_selected.move(665, 480)
 
         # Button show MSE
         self.button_show_mse.setDisabled(True)
         self.button_show_mse.resize(190, 35)
-        self.button_show_mse.move(670, 440)
+        self.button_show_mse.move(665, 510)
+
+        # Checkbox save as dicom
+        self.save_dicom_checkbox.setChecked(False)
+        self.save_dicom_checkbox.move(670, 600)
 
         # Show UI
         self.show()
@@ -530,13 +573,16 @@ class Tomography(QWidget):
     def mse_change(self):
         self.mse_enable = self.mse_checkbox.isChecked()
 
+    def save_dicom_change(self):
+        self.save_as_dicom = self.save_dicom_checkbox.isChecked()
+
     def select_file(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         file_name, _ = QFileDialog.getOpenFileName(self, "QFileDialog.getOpenFileName()", "",
-                                                   "JPG files (*jpg);;DICOM files (*.dicom)", options=options)
+                                                   "Images (*.png *.dcm *.jpg)", options=options)
         if file_name:
-            self.selected_file = file_name
+            self.selected_file = file_name.lower()
             self.button_read_file.setText('Selected file')
             self.button_run_code.setDisabled(False)
 
@@ -594,11 +640,14 @@ class Tomography(QWidget):
             number = self.selected_iteration - 1
             self.selected_picture_basic.setPixmap(QPixmap('results/cut_' + str(number) + '.jpg').scaled(300, 300, Qt.KeepAspectRatio))
 
-    def show_selected_file(self, original):
+    def show_selected_file(self, original, extra_data=None):
         if original:
             self.original_picture_basic.setPixmap(QPixmap('Files/image_not_available.jpg').scaled(300, 300, Qt.KeepAspectRatio))
         else:
-            self.original_picture_basic.setPixmap(QPixmap(self.selected_file).scaled(300, 300, Qt.KeepAspectRatio))
+            if extra_data:
+                self.original_picture_basic.setPixmap(QPixmap(extra_data).scaled(300, 300, Qt.KeepAspectRatio))
+            else:
+                self.original_picture_basic.setPixmap(QPixmap(self.selected_file).scaled(300, 300, Qt.KeepAspectRatio))
 
     def show_sinogram(self, original):
         if original:
@@ -636,6 +685,7 @@ class Tomography(QWidget):
         # Unblock checkbox
         self.mse_checkbox.setDisabled(False)
         self.checkbox_filter.setDisabled(False)
+        self.save_dicom_checkbox.setDisabled(False)
 
         # Block iterations options
         self.button_show_mse.setDisabled(True)
@@ -643,38 +693,66 @@ class Tomography(QWidget):
 
     def run_code(self):
         if self.validate_detectors() and self.validate_iterations() and self.validate_scan_angle():
+            if self.debug:
+                print('Selected file => ', self.selected_file)
+                print('Mask percent => ', self.no_detectors)
+                print('No detectors => ', self.no_detectors)
+                print('No iterations => ', self.iterations)
+                print('Scan angle => ', self.scan_angle)
+                print('Enabled filter => ', self.filter_enable)
+                print('Enabled MSE => ', self.mse_enable)
+
+            # Start time
+            start_time = timer()
+
             # Block actions
             self.button_run_code.setDisabled(True)
             self.button_run_code.setText('In progress ...')
             self.button_read_file.setDisabled(True)
             self.mse_checkbox.setDisabled(True)
             self.checkbox_filter.setDisabled(True)
+            self.save_dicom_checkbox.setDisabled(True)
 
             if self.debug:
-                print('Settings')
+                print('Settings [' + str(timer() - start_time) + ' s]')
 
             # Clear results
             ensure_exists_results_dir()
             clear_results()
 
             if self.debug:
-                print('Clear & Check')
+                print('Clear & Check [' + str(timer() - start_time) + ' s]')
 
+            original_file_data = None
             # Make program
-            file, height, width = read_file(self.selected_file)
+            if self.selected_file.endswith('.dcm'):
+                # DICOM read
+                ds, file = read_dicom('result_dicom.dcm')
+                height = ds.Columns
+                width = ds.Rows
+
+                original_file_data = QImage(file.tostring(), file.shape[0], file.shape[1], file.shape[0], QImage.Format_Mono)
+
+                if self.debug:
+                    debug_dicom(ds)
+            else:
+                # JPG
+                file, height, width = read_file(self.selected_file)
+
+            # Prepare
             picture, radius = prepare_circle(file, height, width)
 
             if self.debug:
-                print('Read & circle')
+                print('Read & circle [' + str(timer() - start_time) + ' s]')
 
             # Show original picture
-            self.show_selected_file(False)
+            self.show_selected_file(False, extra_data=original_file_data)
 
             # Make base sinogram
             sinogram = make_sinogram(picture, radius, self.iterations, self.scan_angle, self.no_detectors)
 
             if self.debug:
-                print('Sinogram')
+                print('Sinogram [' + str(timer() - start_time) + ' s]')
 
             # Write sinogram to file
             write_file("sinogram", sinogram)
@@ -689,13 +767,13 @@ class Tomography(QWidget):
                 sinogram = make_convolve(sinogram, mask)
 
                 if self.debug:
-                    print('Filter')
+                    print('Filter [' + str(timer() - start_time) + ' s]')
 
             # Make reverse images and calculate MSE if enabled
             picture_from_reverse_sinogram, mse_errors = reverse_sinogram(self.mse_enable, file, picture, sinogram, radius, self.iterations, self.scan_angle, self.no_detectors, height, width)
 
             if self.debug:
-                print('Reverse')
+                print('Reverse [' + str(timer() - start_time) + ' s]')
 
             # Show final
             self.show_reverse_image(False)
@@ -707,7 +785,19 @@ class Tomography(QWidget):
                 prepare_mse_graph(max_mse, mse_errors)
 
                 if self.debug:
-                    print('MSE')
+                    print('MSE [' + str(timer() - start_time) + ' s]')
+
+            # If selected save to DICOM
+            if self.save_as_dicom:
+                date = str(self.dicom_date_input.date().toPyDate())
+                patient_name = self.patient_name_input.text()
+                patient_id = self.patient_id_input.text()
+
+                picture = cut_original_size(picture_from_reverse_sinogram, height, width)
+                save_dicom(picture, 'result_dicom.dcm', date, patient_name, patient_id)
+
+                if self.debug:
+                    print('DICOM save [' + str(timer() - start_time) + ' s]')
 
             # End
             self.button_show_selected.setDisabled(False)
@@ -735,7 +825,79 @@ def clear_results():
         os.remove(os.path.join('results', f))
 
 
+def debug_dicom(dataset):
+    pat_name = dataset.PatientName
+    display_name = pat_name.family_name + ", " + pat_name.given_name
+    print("Patient's name .....:", display_name)
+    print("Patient ID .........:", dataset.PatientID)
+    print("Content Date .......:", dataset.ContentDate)
+
+
+def read_dicom(file_name):
+    # Read all details
+    ds = pydicom.dcmread(file_name)
+
+    # Parse strings to int16
+    parsed = np.fromstring(ds.PixelData, dtype=np.uint16)
+
+    # Calculate max value and fetch shape
+    max_value = parsed.max()
+    columns = ds.Columns
+    rows = ds.Rows
+
+    # Prepare pixel array content
+    result = np.empty((columns, rows), dtype=np.uint8)
+
+    # Variables for loop
+    counter = 0
+    row = 0
+
+    # Loop to prepare correct int8 values in array
+    for ind, value in enumerate(parsed):
+        result[row][counter] = int((value * 256) / max_value)
+        counter += 1
+        if counter == columns:
+            counter = 0
+            row += 1
+
+    # Return
+    return ds, result
+
+
+def save_dicom(pixel_array, file_name, date, patient_name, patient_id):
+    file_meta = Dataset()
+    file_meta.MediaStorageSOPClassUID = '1.2.840.10008.5.1.4.1.1.2'
+    file_meta.MediaStorageSOPInstanceUID = "1.2.3"
+    file_meta.ImplementationClassUID = "1.2.3.4"
+
+    ds = FileDataset(file_name, {}, file_meta=file_meta, preamble=b"\0" * 128)
+    ds.PatientName = str(patient_name)
+    ds.PatientID = str(patient_id)
+    ds.is_little_endian = True
+    ds.is_implicit_VR = True
+
+    ds.SamplesPerPixel = 1
+    ds.PixelRepresentation = 0
+    ds.HighBit = 15
+    ds.BitsStored = 16
+    ds.BitsAllocated = 16
+    ds.Columns = pixel_array.shape[0]
+    ds.Rows = pixel_array.shape[1]
+    if pixel_array.dtype != np.uint16:
+        pixel_array = pixel_array.astype(np.uint16)
+    ds.PixelData = pixel_array.tostring()
+
+    ds.ContentDate = str(date.replace('-', ''))
+    ds.ContentTime = str(int(datetime.datetime.strptime(date, "%Y-%m-%d").timestamp()))
+
+    ds.save_as(file_name)
+
+
 def main():
+    # file, h, w = read_file('Files/Kwadraty2.jpg')
+    # save_dicom(file, 'aa.dcm', '2010-02-11', 'aaaa', 'ID')
+    # ds, result = read_dicom('aa.dcm')
+
     app = QApplication(sys.argv)
     ex = Tomography()
     sys.exit(app.exec_())
@@ -754,9 +916,6 @@ if __name__ == "__main__":
     # * Show reverse picture [DONE]
     # * Show selected image [DONE]
     # * Show selected iteration image [DONE]
-
-    # TODO - GUI
-    # * [Optional] Progress bar
 
     # Prepared in code
     # * Read file [DONE]
