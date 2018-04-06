@@ -1,7 +1,6 @@
 # Core imports
 import os
 import cv2
-import time
 import math
 import pydicom
 import datetime
@@ -9,11 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from bresenham import bresenham
 from timeit import default_timer as timer
-from pydicom.uid import ImplicitVRLittleEndian
 from pydicom.dataset import Dataset, FileDataset
-
-
-from pydicom.data import get_testdata_files
 
 # GUI imports
 import sys
@@ -133,9 +128,13 @@ def sum_values_on_line(picture, emitter, detector):
     # Sum - result
     value = 0.0
 
+    # Picture shape
+    x, y = picture.shape
+
     # Loop to fetch values from picture
-    for position in line:
-        value += picture.item(position)
+    for position_x, position_y in line:
+        if position_x < x and position_y < y:
+            value += picture[position_x, position_y]
 
     # Return sum
     return value
@@ -182,6 +181,9 @@ def reverse_sinogram(mse_enabled, original, picture, sinogram, radius, no_iterat
     angle_per_iteration = calculate_iterations_angle(no_iterations)
     scan_angle_in_radius = np.radians(scan_angle)
 
+    # Shape
+    x, y = picture.shape
+
     # Loop to place values from sinogram
     for iteration in range(no_iterations):
         # Calculate alpha value in radians
@@ -197,8 +199,9 @@ def reverse_sinogram(mse_enabled, original, picture, sinogram, radius, no_iterat
             line = bresenham(emitter_x, emitter_y, detector_x, detector_y)
 
             for position_x, position_y in line:
-                # Append values to image
-                result[position_x, position_y] += sinogram[iteration, index]
+                if position_x < x and position_y < y:
+                    # Append values to image
+                    result[position_x, position_y] += sinogram[iteration, index]
 
         # Save iteration results
         picture = cut_original_size(result, height, width)
@@ -391,7 +394,7 @@ class Tomography(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        self.resize(880, 680)
+        self.setFixedSize(880, 680)
         self.center()
         self.setWindowTitle('Tomography simulation')
 
@@ -854,7 +857,7 @@ def read_dicom(file_name):
 
     # Loop to prepare correct int8 values in array
     for ind, value in enumerate(parsed):
-        result[row][counter] = int((value * 256) / max_value)
+        result[counter][row] = int((value * 256) / max_value)
         counter += 1
         if counter == columns:
             counter = 0
@@ -894,49 +897,9 @@ def save_dicom(pixel_array, file_name, date, patient_name, patient_id):
 
 
 def main():
-    # file, h, w = read_file('Files/Kwadraty2.jpg')
-    # save_dicom(file, 'aa.dcm', '2010-02-11', 'aaaa', 'ID')
-    # ds, result = read_dicom('aa.dcm')
-
     app = QApplication(sys.argv)
     ex = Tomography()
     sys.exit(app.exec_())
 
 
-if __name__ == "__main__":
-    main()
-
-    # Done
-    # * Validate scan angle [DONE]
-    # * Validate iterations [DONE]
-    # * Validate detectors [DONE]
-    # * Validate selected iteration [DONE]
-    # * Show MSE graph [DONE]
-    # * Show sinogram [DONE]
-    # * Show reverse picture [DONE]
-    # * Show selected image [DONE]
-    # * Show selected iteration image [DONE]
-
-    # Prepared in code
-    # * Read file [DONE]
-    # * Move data to circle with extra size [DONE]
-    # * Calculation angle per step to have 360 degrees [DONE]
-    # * Calculation detector's angle (between two detectors) [DONE]
-    # * Function to calculation positions on image our detectors and emitter [DONE]
-    # * Bresenham line interpolation [DONE]
-    # * Calculation sum of values on line emitter --> detector [DONE]
-    # * Make sinogram [DONE]
-    # * Normalize values in sinogram [DONE]
-    # * Write sinogram to file [DONE]
-    # * Reverse Radon transformation - from sinogram make picture [DONE]
-    # * Return size of result to original from base picture [DONE]
-    # * Calculate max MSE to proportions in formula [DONE]
-    # * Calculation MSE in percent (current / max_errors_possible) [DONE]
-    # * Save result to file with calculated MSE on it [DONE]
-    # * Calculate mask - Ram-Lak filter [DONE]
-    # * Convolve - own, not from library files [DONE]
-    # * Filtered sinogram [DONE]
-    # * Rewrite MSE to speed up function [DONE]
-    # * Check is correct MSE implementation [DONE]
-    # * Display mode - extra parameter to disable calculations and show only results [DONE]
-    # * GUI [DONE]
+if __name__ == "__main__": main()
