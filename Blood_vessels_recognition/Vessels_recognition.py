@@ -1,5 +1,6 @@
 import os
 import cv2
+import numpy as np
 from matplotlib import pyplot as plt
 
 
@@ -32,9 +33,31 @@ class Recognition:
         self.mask = mask.copy()
         self.expert_mask = expert_mask.copy()
 
-    def cut_green_channel(self):
-        b, g, r = cv2.split(self.picture)
-        return g
+    def cut_green_channel_with_contrast(self):
+        img = np.int16(self.picture)
+        img[:, :, 0] = 0
+        img[:, :, 2] = 0
+
+        contrast = 15
+        brightness = 50
+        img = img * (contrast / 127 + 1) - contrast + brightness
+        img = np.clip(img, 0, 255)
+        img = np.uint8(img)
+
+        return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    def make_recognition(self):
+        gray = self.cut_green_channel_with_contrast()
+        canny_edges = cv2.Canny(gray, 150, 255, apertureSize=5, L2gradient=True)
+
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        dilate = cv2.dilate(canny_edges, kernel)
+
+        median = cv2.medianBlur(dilate, 5)
+
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
+        dilate = cv2.dilate(median, kernel)
+        return dilate
 
 
 def main():
@@ -46,8 +69,8 @@ def main():
     expert_mask = reader.read_expert_mask()
 
     recognition = Recognition(original_image, mask, expert_mask)
-    green_channel = recognition.cut_green_channel()
-    plt.imshow(green_channel, cmap='gray')
+    edges = recognition.make_recognition()
+    plt.imshow(edges, cmap='gray')
     plt.show()
 
 
@@ -58,9 +81,15 @@ if __name__ == "__main__":
 # * Read image [DONE]
 # * Read expert mask [DONE]
 # * Select only green channel from image [DONE]
+# * Dilatation [DONE]
+# * MedianBlur [DONE]
 
 # TODO LIST
-# * Dilatation
-# * MedianBlur
+# * Frangi filter to prepare continuous edges
+# * Prepare binary response (0/1 - vessel or not) as own mask
 # * Save result as picture
+# * Compare own mask with expert mask and calculate statistics
 # * Machine Learning with SciKit
+
+# OPTIONAL
+# * Cut image from channel - use mask to reduce extra edges around the eye
