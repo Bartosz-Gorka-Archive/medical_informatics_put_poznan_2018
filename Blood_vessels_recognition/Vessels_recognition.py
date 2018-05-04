@@ -28,13 +28,35 @@ class Reader:
         return cv2.imread(path)
 
 
+class Writer:
+    clean_directory = False
+    result_path = 'Results'
+
+    def __init__(self, clean_dir=False):
+        self.clear_result_directory()
+        self.create_result_directory()
+        self.clean_directory = clean_dir
+
+    def create_result_directory(self):
+        if not os.path.exists(self.result_path):
+            os.mkdir(self.result_path, 0o755)
+
+    def clear_result_directory(self):
+        if self.clean_directory:
+            os.rmdir(self.result_path)
+
+    def save_mask(self, picture):
+        pass
+
+
 class Recognition:
     debug = True
 
-    def __init__(self, picture, mask, expert_mask):
+    def __init__(self, picture, mask, expert_mask, debug=True):
         self.picture = picture.copy()
         self.mask = mask.copy()
         self.expert_mask = expert_mask.copy()
+        self.debug = debug
 
     def cut_green_channel_with_contrast(self):
         img = np.int16(self.picture)
@@ -79,15 +101,18 @@ class Recognition:
 def main():
     file_name = '01_h'
     reader = Reader(file_name)
+    writer = Writer()
 
     original_image = reader.read_picture()
     mask = reader.read_mask()
     expert_mask = reader.read_expert_mask()
 
     recognition = Recognition(original_image, mask, expert_mask)
-    edges = recognition.make_recognition()
-    plt.imshow(edges, cmap='gray')
-    plt.show()
+    mask = recognition.make_recognition()
+    # plt.imshow(mask, cmap='gray')
+    # plt.show()
+    writer.save_mask(mask)
+
 
 
 if __name__ == "__main__":
