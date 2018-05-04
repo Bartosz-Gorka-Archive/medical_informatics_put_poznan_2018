@@ -29,7 +29,7 @@ class Reader:
 
 
 class Writer:
-    clean_directory = False
+    clean_directory = True
     result_path = 'Results'
     picture_ext = '.jpg'
 
@@ -44,7 +44,9 @@ class Writer:
 
     def clear_result_directory(self):
         if self.clean_directory:
-            os.rmdir(self.result_path)
+            files_to_delete = [os.path.join(self.result_path, file) for file in os.listdir(self.result_path)]
+            for file in files_to_delete:
+                os.remove(file)
 
     def save_mask(self, file_name, picture):
         name = os.path.join(self.result_path, file_name + '_mask' + self.picture_ext)
