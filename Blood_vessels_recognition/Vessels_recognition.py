@@ -127,6 +127,42 @@ class Statistics:
 
         return self.true_positive, self.false_positive, self.false_negative, self.true_negative
 
+    def sensitivity(self):
+        return self.true_positive / (self.true_positive + self.false_negative)
+
+    def specificity(self):
+        return self.true_negative / (self.false_positive + self.true_negative)
+
+    def false_positive_rate(self):
+        return self.false_positive / (self.false_positive + self.true_negative)
+
+    def false_discovery_rate(self):
+        return self.false_positive / (self.false_positive + self.true_positive)
+
+    def accuracy(self):
+        positive = self.true_positive + self.true_negative
+        negative = self.false_positive + self.false_negative
+        return positive / (positive + negative)
+
+    def positive_predictive_value(self):
+        return self.true_positive / (self.true_positive + self.false_positive)
+
+    def negative_predictive_value(self):
+        return self.true_negative / (self.true_negative + self.false_negative)
+
+    def statistics(self, expert_mask, own_mask):
+        self.compare_masks(expert_mask, own_mask)
+        stats = {
+            'sensitivity': self.sensitivity(),
+            'specificity': self.specificity(),
+            'false positive rate': self.false_positive_rate(),
+            'false discovery rate': self.false_discovery_rate(),
+            'accuracy': self.accuracy(),
+            'positive predictive value': self.positive_predictive_value(),
+            'negative predictive value': self.negative_predictive_value()
+        }
+        return stats
+
 
 def main():
     file_name = '01_h'
@@ -139,12 +175,11 @@ def main():
 
     recognition = Recognition(original_image, mask, expert_mask)
     own_mask = recognition.make_recognition()
-    # plt.imshow(own_mask, cmap='gray')
-    # plt.show()
     writer.save_mask(file_name, own_mask)
     statistics = Statistics()
-    r = statistics.compare_masks(expert_mask, own_mask)
-    print(r)
+    stats = statistics.statistics(expert_mask, own_mask)
+    for (key, val) in stats.items():
+        print(f'{key} => {val:.{5}f}')
 
 
 if __name__ == "__main__":
@@ -160,9 +195,9 @@ if __name__ == "__main__":
 # * Prepare binary response (0/1 - vessel or not) as own mask [DONE]
 # * Save result as picture [DONE]
 # * Compare own mask with expert mask [DONE]
+# * Calculate statistics [DONE]
 
 # TODO LIST
-# * Calculate statistics
 # * Machine Learning with SciKit
 
 # OPTIONAL
