@@ -16,21 +16,22 @@ class Reader:
         self.file_name = file_name
 
     def read_picture(self):
-        path = os.path.join(self.pictures_path, self.file_name) + self.picture_ext
+        path = os.path.join(self.pictures_path, self.file_name + self.picture_ext)
         return cv2.imread(path)
 
     def read_expert_mask(self):
-        path = os.path.join(self.expert_result_path, self.file_name) + self.details_ext
+        path = os.path.join(self.expert_result_path, self.file_name + self.details_ext)
         return cv2.imread(path)
 
     def read_mask(self):
-        path = os.path.join(self.mask_path, self.file_name) + '_mask' + self.details_ext
+        path = os.path.join(self.mask_path, self.file_name + '_mask' + self.details_ext)
         return cv2.imread(path)
 
 
 class Writer:
     clean_directory = False
     result_path = 'Results'
+    picture_ext = '.jpg'
 
     def __init__(self, clean_dir=False):
         self.clear_result_directory()
@@ -45,8 +46,9 @@ class Writer:
         if self.clean_directory:
             os.rmdir(self.result_path)
 
-    def save_mask(self, picture):
-        pass
+    def save_mask(self, file_name, picture):
+        name = os.path.join(self.result_path, file_name + '_mask' + self.picture_ext)
+        cv2.imwrite(name, picture)
 
 
 class Recognition:
@@ -111,7 +113,7 @@ def main():
     mask = recognition.make_recognition()
     # plt.imshow(mask, cmap='gray')
     # plt.show()
-    writer.save_mask(mask)
+    writer.save_mask(file_name, mask)
 
 
 
@@ -126,9 +128,9 @@ if __name__ == "__main__":
 # * MedianBlur [DONE]
 # * Frangi filter to prepare continuous edges [DONE]
 # * Prepare binary response (0/1 - vessel or not) as own mask [DONE]
+# * Save result as picture [DONE]
 
 # TODO LIST
-# * Save result as picture
 # * Compare own mask with expert mask and calculate statistics
 # * Machine Learning with SciKit
 
