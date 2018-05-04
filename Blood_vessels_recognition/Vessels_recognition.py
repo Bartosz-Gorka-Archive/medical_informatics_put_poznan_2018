@@ -1,7 +1,8 @@
 import os
 import cv2
 import numpy as np
-from matplotlib import pyplot as plt
+from skimage import filters
+from matplotlib import pyplot as plt  # Optional - for show part result only
 
 
 class Reader:
@@ -55,9 +56,11 @@ class Recognition:
 
         median = cv2.medianBlur(dilate, 5)
 
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
-        dilate = cv2.dilate(median, kernel)
-        return dilate
+        # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
+        # dilate = cv2.dilate(median, kernel)
+
+        pic = filters.frangi(median)
+        return pic
 
 
 def main():
@@ -83,9 +86,9 @@ if __name__ == "__main__":
 # * Select only green channel from image [DONE]
 # * Dilatation [DONE]
 # * MedianBlur [DONE]
+# * Frangi filter to prepare continuous edges [DONE]
 
 # TODO LIST
-# * Frangi filter to prepare continuous edges
 # * Prepare binary response (0/1 - vessel or not) as own mask
 # * Save result as picture
 # * Compare own mask with expert mask and calculate statistics
