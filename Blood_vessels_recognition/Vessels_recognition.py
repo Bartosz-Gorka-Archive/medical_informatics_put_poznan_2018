@@ -29,6 +29,8 @@ class Reader:
 
 
 class Recognition:
+    debug = True
+
     def __init__(self, picture, mask, expert_mask):
         self.picture = picture.copy()
         self.mask = mask.copy()
@@ -47,6 +49,16 @@ class Recognition:
 
         return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
+    def binary_response(self, image):
+        threshold = image.mean() * 1.35
+        image[image > threshold] = 255
+        image[image <= threshold] = 0
+
+        if self.debug:
+            print('Threshold =>', threshold)
+
+        return image
+
     def make_recognition(self):
         gray = self.cut_green_channel_with_contrast()
         canny_edges = cv2.Canny(gray, 150, 255, apertureSize=5, L2gradient=True)
@@ -56,11 +68,12 @@ class Recognition:
 
         median = cv2.medianBlur(dilate, 5)
 
-        # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
-        # dilate = cv2.dilate(median, kernel)
+        # pic = filters.frangi(median) # TODO it consumes to much time
 
-        pic = filters.frangi(median)
-        return pic
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
+        dilate = cv2.dilate(median, kernel)
+
+        return self.binary_response(dilate)
 
 
 def main():
@@ -87,9 +100,9 @@ if __name__ == "__main__":
 # * Dilatation [DONE]
 # * MedianBlur [DONE]
 # * Frangi filter to prepare continuous edges [DONE]
+# * Prepare binary response (0/1 - vessel or not) as own mask [DONE]
 
 # TODO LIST
-# * Prepare binary response (0/1 - vessel or not) as own mask
 # * Save result as picture
 # * Compare own mask with expert mask and calculate statistics
 # * Machine Learning with SciKit
