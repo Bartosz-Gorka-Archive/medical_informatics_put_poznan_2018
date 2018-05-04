@@ -1,5 +1,6 @@
 import os
 import cv2
+from matplotlib import pyplot as plt
 
 
 class Reader:
@@ -25,18 +26,29 @@ class Reader:
         return cv2.imread(path)
 
 
+class Recognition:
+    def __init__(self, picture, mask, expert_mask):
+        self.picture = picture.copy()
+        self.mask = mask.copy()
+        self.expert_mask = expert_mask.copy()
+
+    def cut_green_channel(self):
+        b, g, r = cv2.split(self.picture)
+        return g
+
+
 def main():
     file_name = '01_h'
     reader = Reader(file_name)
 
     original_image = reader.read_picture()
-    print(original_image.shape)
-
-    expert_mask = reader.read_expert_mask()
-    print(expert_mask.shape)
-
     mask = reader.read_mask()
-    print(mask.shape)
+    expert_mask = reader.read_expert_mask()
+
+    recognition = Recognition(original_image, mask, expert_mask)
+    green_channel = recognition.cut_green_channel()
+    plt.imshow(green_channel, cmap='gray')
+    plt.show()
 
 
 if __name__ == "__main__":
@@ -45,9 +57,9 @@ if __name__ == "__main__":
 # DONE LIST
 # * Read image [DONE]
 # * Read expert mask [DONE]
+# * Select only green channel from image [DONE]
 
 # TODO LIST
-# * Select only green channel from image
 # * Dilatation
 # * MedianBlur
 # * Save result as picture
