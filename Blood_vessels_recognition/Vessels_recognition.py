@@ -200,6 +200,7 @@ class SimpleLearner:
     def learn(self):
         image = self.prepare_image()
         counter = 0
+        vessels_counter = 0
         hu_moments = []
         decisions = []
 
@@ -213,12 +214,25 @@ class SimpleLearner:
             random_height = np.random.randint(mask_radius, max_height)
             random_width = np.random.randint(mask_radius, max_width)
 
-            counter += 1
             cut = image[random_height - mask_radius: random_height + mask_radius + 1, random_width - mask_radius: random_width + mask_radius + 1]
-            decisions.append(self.expert_mask[random_height, random_width])
-            hu_moments.append(cv2.HuMoments(cv2.moments(cut)).flatten())
+            decision = self.expert_mask[random_height, random_width]
+            hu = cv2.HuMoments(cv2.moments(cut)).flatten()
+
+            counter += 1
+            decisions.append(decision)
+            hu_moments.append(hu)
 
         return hu_moments, decisions
+
+    def cosine_similarity(self, hu_moments, vector):
+        similarity = []
+        for hu_moment in hu_moments:
+            similarity.append(np.dot(vector, hu_moment) / (np.linalg.norm(vector) * np.linalg.norm(hu_moment)))
+        return similarity
+
+    def make_decision(self, hu_moments, vector, decisions):
+        index = np.argmax(self.cosine_similarity(hu_moments, vector))
+        return decisions[index]
 
 
 def main():
@@ -239,8 +253,13 @@ def main():
     #     print(f'{key} => {val:.{5}f}')
     learner = SimpleLearner(expert_mask, mask, original_image)
     hu_moments, decisions = learner.learn()
-    writer.save_hu_moments(hu_moments, decisions)
+    # writer.save_hu_moments(hu_moments, decisions)
     r_hu, r_d = reader.read_hu_moments()
+    similarity = learner.cosine_similarity(r_hu, hu_moments[2])
+    print(similarity)
+    print(np.argmax(similarity))
+    print(learner.make_decision(r_hu, hu_moments[3], decisions))
+    print(decisions)
 
 
 if __name__ == "__main__":
@@ -260,9 +279,9 @@ if __name__ == "__main__":
 # * Calculate Hu moments - picture analytics [DONE]
 # * Save Hu moments to file [DONE]
 # * Load Hu moments from file [DONE]
+# * Calculate similarity from Hu moments and array from Learner [DONE]
 
 # TODO LIST
-# * Calculate similarity from Hu moments and array from Learner
 # * Make binary response - analytics all pixels and check decision from Learner
 # * Machine Learning with SciKit
 
