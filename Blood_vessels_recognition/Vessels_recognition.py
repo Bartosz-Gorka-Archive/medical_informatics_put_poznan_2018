@@ -164,6 +164,45 @@ class Statistics:
         return stats
 
 
+class SimpleLearner:
+    mask_size = 5
+    total_elements = 1_000
+
+    def __init__(self, expert_mask, mask, picture):
+        self.expert_mask = expert_mask.copy()
+        self.mask = mask.copy()
+        self.picture = picture.copy()
+
+    def prepare_image(self):
+        recognition = Recognition(self.picture, self.mask, self.picture)
+        return recognition.cut_green_channel_with_contrast()
+
+    def learn(self):
+        image = self.prepare_image()
+        counter = 0
+        hu_moments = []
+        decisions = []
+
+        # Calculate max position, mask radius to min position
+        height, width = self.mask.shape
+        mask_radius = int((self.mask_size - 1) / 2)
+        max_height = height - mask_radius
+        max_width = width - mask_radius
+
+        self.total_elements = 1
+
+        while counter < self.total_elements:
+            random_height = np.random.randint(mask_radius, max_height)
+            random_width = np.random.randint(mask_radius, max_width)
+
+            counter += 1
+            cut = image[random_height - mask_radius: random_height + mask_radius + 1, random_width - mask_radius: random_width + mask_radius + 1]
+            decisions.append(self.expert_mask[random_height, random_width])
+            hu_moments.append(cv2.HuMoments(cv2.moments(cut)).flatten())
+
+        return hu_moments, decisions
+
+
 def main():
     file_name = '01_h'
     reader = Reader(file_name)
@@ -173,13 +212,15 @@ def main():
     mask = reader.read_mask()
     expert_mask = reader.read_expert_mask()
 
-    recognition = Recognition(original_image, mask, expert_mask)
-    own_mask = recognition.make_recognition()
-    writer.save_mask(file_name, own_mask)
-    statistics = Statistics()
-    stats = statistics.statistics(expert_mask, own_mask)
-    for (key, val) in stats.items():
-        print(f'{key} => {val:.{5}f}')
+    # recognition = Recognition(original_image, mask, expert_mask)
+    # own_mask = recognition.make_recognition()
+    # writer.save_mask(file_name, own_mask)
+    # statistics = Statistics()
+    # stats = statistics.statistics(expert_mask, own_mask)
+    # for (key, val) in stats.items():
+    #     print(f'{key} => {val:.{5}f}')
+    learner = SimpleLearner(expert_mask, mask, original_image)
+    learner.learn()
 
 
 if __name__ == "__main__":
@@ -196,8 +237,13 @@ if __name__ == "__main__":
 # * Save result as picture [DONE]
 # * Compare own mask with expert mask [DONE]
 # * Calculate statistics [DONE]
+# * Calculate Hu moments - picture analytics [DONE]
 
 # TODO LIST
+# * Save Hu moments to file
+# * Load Hu moments from file
+# * Calculate similarity from Hu moments and array from Learner
+# * Make binary response - analytics all pixels and check decision from Learner
 # * Machine Learning with SciKit
 
 # OPTIONAL
