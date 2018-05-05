@@ -1,7 +1,7 @@
 import os
 import cv2
 import numpy as np
-from skimage import filters
+from skimage import filters  # Frangi filter
 from matplotlib import pyplot as plt  # Optional - for show part result only
 
 
@@ -186,7 +186,7 @@ class Statistics:
 
 class SimpleLearner:
     mask_size = 5
-    total_elements = 1_00
+    total_elements = 1_000
 
     def __init__(self, expert_mask, mask, picture):
         self.expert_mask = expert_mask.copy()
@@ -200,7 +200,6 @@ class SimpleLearner:
     def learn(self):
         image = self.prepare_image()
         counter = 0
-        vessels_counter = 0
         hu_moments = []
         decisions = []
 
@@ -218,12 +217,6 @@ class SimpleLearner:
             decision = self.expert_mask[random_height, random_width]
             hu = cv2.HuMoments(cv2.moments(cut)).flatten()
 
-            if decision != 0:
-                vessels_counter += 1
-
-            if counter > (self.total_elements * 0.7) and decision == 0:
-                continue
-
             counter += 1
             decisions.append(decision)
             hu_moments.append(hu)
@@ -233,12 +226,31 @@ class SimpleLearner:
     def cosine_similarity(self, hu_moments, vector):
         similarity = []
         for hu_moment in hu_moments:
+            # similarity.append(np.abs(np.subtract(hu_moment, vector)).sum())
             similarity.append(np.dot(vector, hu_moment) / (np.linalg.norm(vector) * np.linalg.norm(hu_moment)))
         return similarity
 
     def make_decision(self, hu_moments, vector, decisions):
+        # index = np.argmin(self.cosine_similarity(hu_moments, vector))
         index = np.argmax(self.cosine_similarity(hu_moments, vector))
         return decisions[index]
+
+    def prepare_response(self, hu_moments, decisions):
+        image = self.prepare_image()
+        response_image = np.zeros_like(image)
+
+        height, width = self.mask.shape
+        mask_radius = int((self.mask_size - 1) / 2)
+        max_height = height - mask_radius
+        max_width = width - mask_radius
+
+        for row in range(mask_radius, max_height):
+            for col in range(mask_radius, max_width):
+                cut = image[row - mask_radius: row + mask_radius + 1, col - mask_radius: col + mask_radius + 1]
+                vector = cv2.HuMoments(cv2.moments(cut)).flatten()
+                response_image[row, col] = self.make_decision(hu_moments, vector, decisions)
+
+        return response_image
 
 
 def main():
@@ -261,8 +273,9 @@ def main():
     hu_moments, decisions = learner.learn()
     writer.save_hu_moments(hu_moments, decisions)
     r_hu, r_d = reader.read_hu_moments()
-    reversed_hu_moments = r_hu[:: -1]
-    print(learner.make_decision(reversed_hu_moments, hu_moments[3], decisions))
+    img = learner.prepare_response(r_hu, r_d)
+    plt.imshow(img, cmap='gray')
+    plt.show()
 
 
 if __name__ == "__main__":
@@ -284,10 +297,11 @@ if __name__ == "__main__":
 # * Load Hu moments from file [DONE]
 # * Calculate similarity from Hu moments and array from Learner [DONE]
 # * Make decision [DONE]
+# * Make binary response - analytics all pixels and check decision from Learner [DONE]
 
 # TODO LIST
-# * Make binary response - analytics all pixels and check decision from Learner
 # * Machine Learning with SciKit
 
 # OPTIONAL
 # * Cut image from channel - use mask to reduce extra edges around the eye
+# * Speed up prepare response from own Classifier
