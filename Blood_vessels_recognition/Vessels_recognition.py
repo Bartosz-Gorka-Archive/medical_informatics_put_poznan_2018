@@ -1,9 +1,16 @@
+# CORE
 import os
 import cv2
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 from skimage import filters  # Frangi filter
 from matplotlib import pyplot as plt  # Optional - for show part result only
+
+# GUI
+import sys
+from PyQt5.QtWidgets import *
+from PyQt5.QtGui import *
+from PyQt5.QtCore import Qt
 
 
 class Reader:
@@ -271,18 +278,76 @@ class SimpleLearner:
 
             temp.append(classifier.predict(vec))
 
-        response_image[mask_radius:max_height+1, mask_radius:max_width] = temp
+        response_image[mask_radius:max_height+1, mask_radius:max_width+1] = temp
         return response_image
 
 
-def main():
-    file_name = '01_h'
-    reader = Reader(file_name)
-    writer = Writer()
+class GUIWidget(QWidget):
+    def __init__(self):
+        super().__init__()
 
-    original_image = reader.read_picture()
-    mask = reader.read_mask()
-    expert_mask = reader.read_expert_mask()
+        # Variables
+        self.no = 1
+        self.calculate_stats = True
+
+        # Labels
+        self.label_picture = QLabel(self)
+        self.label_expert_mask = QLabel(self)
+        self.label_basic_mask = QLabel(self)
+        self.label_simple_learn_mask = QLabel(self)
+        self.label_rf_mask = QLabel(self)
+
+        # Pictures
+        self.picture_original_picture = QLabel(self)
+        self.picture_expert_mask = QLabel(self)
+        self.picture_basic_mask = QLabel(self)
+        self.picture_simple_learn_mask = QLabel(self)
+        self.picture_rf_mask = QLabel(self)
+
+        # Buttons
+        self.button_clean_calculations = QPushButton('Clean calculations', self)
+        self.button_show_stats = QPushButton('Show statistics', self)
+
+        # Checkboxes
+        self.checkbox_calculate_stats = QCheckBox('Calculate statistics', self)
+
+        # Actions
+        self.checkbox_calculate_stats.stateChanged.connect(lambda: self.calculate_stats_change())
+
+        # Init GUI
+        self.init_ui()
+
+    def calculate_stats_change(self):
+        self.calculate_stats = self.checkbox_calculate_stats.isChecked()
+
+    def center(self):
+        qr = self.frameGeometry()
+        cp = QDesktopWidget().availableGeometry().center()
+        qr.moveCenter(cp)
+        self.move(qr.topLeft())
+
+    def init_ui(self):
+        # Size, position, title
+        self.setFixedSize(880, 680)
+        self.center()
+        self.setWindowTitle('Vessels recognition')
+
+        # Show UI
+        self.show()
+
+
+def main():
+    app = QApplication(sys.argv)
+    ex = GUIWidget()
+    sys.exit(app.exec_())
+
+    # file_name = '01_h'
+    # reader = Reader(file_name)
+    # writer = Writer()
+    #
+    # original_image = reader.read_picture()
+    # mask = reader.read_mask()
+    # expert_mask = reader.read_expert_mask()
 
     #####################
     #    Recognition    #
@@ -298,8 +363,8 @@ def main():
     #####################
     #   SimpleLearner   #
     #####################
-    learner = SimpleLearner(expert_mask, mask, original_image)
-    hu_moments, decisions = learner.learn()
+    # learner = SimpleLearner(expert_mask, mask, original_image)
+    # hu_moments, decisions = learner.learn()
     # writer.save_hu_moments(hu_moments, decisions)
     # r_hu, r_d = reader.read_hu_moments()
     # img = learner.prepare_response(r_hu, r_d)
@@ -309,11 +374,11 @@ def main():
     #####################
     #   SciKit -> kNN   #
     #####################
-    near_neighbors = KNeighborsClassifier(n_neighbors=5, n_jobs=-1)
-    near_neighbors.fit(hu_moments, decisions)
-    resp_image = learner.knn_prepare_response(near_neighbors)
-    plt.imshow(resp_image, cmap='gray')
-    plt.show()
+    # near_neighbors = KNeighborsClassifier(n_neighbors=5, n_jobs=-1)
+    # near_neighbors.fit(hu_moments, decisions)
+    # resp_image = learner.knn_prepare_response(near_neighbors)
+    # plt.imshow(resp_image, cmap='gray')
+    # plt.show()
 
     #####################
     #   Random Forest   #
@@ -341,8 +406,13 @@ if __name__ == "__main__":
 # * Calculate similarity from Hu moments and array from Learner [DONE]
 # * Make decision [DONE]
 # * Make binary response - analytics all pixels and check decision from Learner [DONE]
+# * KNeighborsClassifier [DONE]
 
 # TODO LIST
+# * RandomForest Classifier
+# * Cross validation
+# * PyQT GUI
+# * Enable make actions from GUI
 # * Machine Learning with SciKit
 
 # OPTIONAL
