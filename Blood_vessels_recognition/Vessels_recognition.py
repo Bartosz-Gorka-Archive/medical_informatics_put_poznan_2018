@@ -1,6 +1,7 @@
 import os
 import cv2
 import numpy as np
+from sklearn.neighbors import KNeighborsClassifier
 from skimage import filters  # Frangi filter
 from matplotlib import pyplot as plt  # Optional - for show part result only
 
@@ -85,7 +86,7 @@ class Recognition:
         self.debug = debug
 
     def cut_green_channel_with_contrast(self):
-        img = np.int16(self.picture)
+        img = np.int16(self.picture.copy())
         img[:, :, 0] = 0
         img[:, :, 2] = 0
 
@@ -186,7 +187,7 @@ class Statistics:
 
 class SimpleLearner:
     mask_size = 5
-    total_elements = 1_000
+    total_elements = 2_000
 
     def __init__(self, expert_mask, mask, picture):
         self.expert_mask = expert_mask.copy()
@@ -252,6 +253,27 @@ class SimpleLearner:
 
         return response_image
 
+    def knn_prepare_response(self, classifier):
+        image = self.prepare_image()
+        response_image = np.zeros_like(image)
+        temp = []
+
+        height, width = self.mask.shape
+        mask_radius = int((self.mask_size - 1) / 2)
+        max_height = height - mask_radius
+        max_width = width - mask_radius
+
+        for row in range(mask_radius, max_height + 1):
+            vec = []
+            for col in range(mask_radius, max_width + 1):
+                cut = image[row - mask_radius: row + mask_radius + 1, col - mask_radius: col + mask_radius + 1]
+                vec.append(cv2.HuMoments(cv2.moments(cut)).flatten())
+
+            temp.append(classifier.predict(vec))
+
+        response_image[mask_radius:max_height+1, mask_radius:max_width] = temp
+        return response_image
+
 
 def main():
     file_name = '01_h'
@@ -262,6 +284,9 @@ def main():
     mask = reader.read_mask()
     expert_mask = reader.read_expert_mask()
 
+    #####################
+    #    Recognition    #
+    #####################
     # recognition = Recognition(original_image, mask, expert_mask)
     # own_mask = recognition.make_recognition()
     # writer.save_mask(file_name, own_mask)
@@ -269,13 +294,31 @@ def main():
     # stats = statistics.statistics(expert_mask, own_mask)
     # for (key, val) in stats.items():
     #     print(f'{key} => {val:.{5}f}')
+
+    #####################
+    #   SimpleLearner   #
+    #####################
     learner = SimpleLearner(expert_mask, mask, original_image)
     hu_moments, decisions = learner.learn()
-    writer.save_hu_moments(hu_moments, decisions)
-    r_hu, r_d = reader.read_hu_moments()
-    img = learner.prepare_response(r_hu, r_d)
-    plt.imshow(img, cmap='gray')
+    # writer.save_hu_moments(hu_moments, decisions)
+    # r_hu, r_d = reader.read_hu_moments()
+    # img = learner.prepare_response(r_hu, r_d)
+    # plt.imshow(img, cmap='gray')
+    # plt.show()
+
+    #####################
+    #   SciKit -> kNN   #
+    #####################
+    near_neighbors = KNeighborsClassifier(n_neighbors=5, n_jobs=-1)
+    near_neighbors.fit(hu_moments, decisions)
+    resp_image = learner.knn_prepare_response(near_neighbors)
+    plt.imshow(resp_image, cmap='gray')
     plt.show()
+
+    #####################
+    #   Random Forest   #
+    #####################
+    # TODO
 
 
 if __name__ == "__main__":
