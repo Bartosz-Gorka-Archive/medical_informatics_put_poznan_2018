@@ -186,7 +186,7 @@ class Statistics:
 
 class SimpleLearner:
     mask_size = 5
-    total_elements = 1_000
+    total_elements = 1_00
 
     def __init__(self, expert_mask, mask, picture):
         self.expert_mask = expert_mask.copy()
@@ -217,6 +217,12 @@ class SimpleLearner:
             cut = image[random_height - mask_radius: random_height + mask_radius + 1, random_width - mask_radius: random_width + mask_radius + 1]
             decision = self.expert_mask[random_height, random_width]
             hu = cv2.HuMoments(cv2.moments(cut)).flatten()
+
+            if decision != 0:
+                vessels_counter += 1
+
+            if counter > (self.total_elements * 0.7) and decision == 0:
+                continue
 
             counter += 1
             decisions.append(decision)
@@ -253,13 +259,10 @@ def main():
     #     print(f'{key} => {val:.{5}f}')
     learner = SimpleLearner(expert_mask, mask, original_image)
     hu_moments, decisions = learner.learn()
-    # writer.save_hu_moments(hu_moments, decisions)
+    writer.save_hu_moments(hu_moments, decisions)
     r_hu, r_d = reader.read_hu_moments()
-    similarity = learner.cosine_similarity(r_hu, hu_moments[2])
-    print(similarity)
-    print(np.argmax(similarity))
-    print(learner.make_decision(r_hu, hu_moments[3], decisions))
-    print(decisions)
+    reversed_hu_moments = r_hu[:: -1]
+    print(learner.make_decision(reversed_hu_moments, hu_moments[3], decisions))
 
 
 if __name__ == "__main__":
@@ -280,6 +283,7 @@ if __name__ == "__main__":
 # * Save Hu moments to file [DONE]
 # * Load Hu moments from file [DONE]
 # * Calculate similarity from Hu moments and array from Learner [DONE]
+# * Make decision [DONE]
 
 # TODO LIST
 # * Make binary response - analytics all pixels and check decision from Learner
