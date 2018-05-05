@@ -9,6 +9,8 @@ class Reader:
     pictures_path = 'Files/pictures'
     mask_path = 'Files/masks'
     expert_result_path = 'Files/expert_results'
+    classifier_path = 'Classifier'
+    classifier_name = 'classifier'
     picture_ext = '.jpg'
     details_ext = '.tif'
 
@@ -29,20 +31,33 @@ class Reader:
         image = cv2.imread(path)
         return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
+    def read_hu_moments(self):
+        name = os.path.join(self.classifier_path, self.classifier_name)
+        hu_moments = np.load(name + '_model.npy')
+        decisions = np.load(name + '_decision.npy')
+        return hu_moments, decisions
+
 
 class Writer:
     clean_directory = True
     result_path = 'Results'
     picture_ext = '.jpg'
+    classifier_path = 'Classifier'
+    classifier_name = 'classifier'
 
     def __init__(self, clean_dir=False):
         self.clear_result_directory()
         self.create_result_directory()
+        self.create_classifier_directory()
         self.clean_directory = clean_dir
 
     def create_result_directory(self):
         if not os.path.exists(self.result_path):
             os.mkdir(self.result_path, 0o755)
+
+    def create_classifier_directory(self):
+        if not os.path.exists(self.classifier_path):
+            os.mkdir(self.classifier_path, 0o755)
 
     def clear_result_directory(self):
         if self.clean_directory:
@@ -53,6 +68,11 @@ class Writer:
     def save_mask(self, file_name, picture):
         name = os.path.join(self.result_path, file_name + '_mask' + self.picture_ext)
         cv2.imwrite(name, picture)
+
+    def save_hu_moments(self, hu_moments, decisions):
+        name = os.path.join(self.classifier_path, self.classifier_name)
+        np.save(name + '_model.npy', hu_moments)
+        np.save(name + '_decision.npy', decisions)
 
 
 class Recognition:
@@ -189,8 +209,6 @@ class SimpleLearner:
         max_height = height - mask_radius
         max_width = width - mask_radius
 
-        self.total_elements = 1
-
         while counter < self.total_elements:
             random_height = np.random.randint(mask_radius, max_height)
             random_width = np.random.randint(mask_radius, max_width)
@@ -220,7 +238,9 @@ def main():
     # for (key, val) in stats.items():
     #     print(f'{key} => {val:.{5}f}')
     learner = SimpleLearner(expert_mask, mask, original_image)
-    learner.learn()
+    hu_moments, decisions = learner.learn()
+    writer.save_hu_moments(hu_moments, decisions)
+    r_hu, r_d = reader.read_hu_moments()
 
 
 if __name__ == "__main__":
@@ -238,10 +258,10 @@ if __name__ == "__main__":
 # * Compare own mask with expert mask [DONE]
 # * Calculate statistics [DONE]
 # * Calculate Hu moments - picture analytics [DONE]
+# * Save Hu moments to file [DONE]
+# * Load Hu moments from file [DONE]
 
 # TODO LIST
-# * Save Hu moments to file
-# * Load Hu moments from file
 # * Calculate similarity from Hu moments and array from Learner
 # * Make binary response - analytics all pixels and check decision from Learner
 # * Machine Learning with SciKit
