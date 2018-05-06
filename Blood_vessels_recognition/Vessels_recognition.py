@@ -14,50 +14,35 @@ from PyQt5.QtCore import Qt
 
 
 class Reader:
-    pictures_path = 'Files/pictures'
-    mask_path = 'Files/masks'
-    expert_result_path = 'Files/expert_results'
-    classifier_path = 'Classifier'
-    classifier_name = 'classifier'
-    picture_ext = '.jpg'
-    details_ext = '.tif'
-
-    def __init__(self, file_name):
-        self.file_name = file_name
-
-    def read_picture(self):
-        path = os.path.join(self.pictures_path, self.file_name + self.picture_ext)
+    @staticmethod
+    def read_picture(path):
         return cv2.imread(path)
 
-    def read_expert_mask(self):
-        path = os.path.join(self.expert_result_path, self.file_name + self.details_ext)
+    @staticmethod
+    def read_gray_picture(path):
         image = cv2.imread(path)
         return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    def read_mask(self):
-        path = os.path.join(self.mask_path, self.file_name + '_mask' + self.details_ext)
-        image = cv2.imread(path)
-        return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    def read_hu_moments(self):
-        name = os.path.join(self.classifier_path, self.classifier_name)
-        hu_moments = np.load(name + '_model.npy')
-        decisions = np.load(name + '_decision.npy')
-        return hu_moments, decisions
+    @staticmethod
+    def read_numpy_array(path):
+        np_array = np.load(path)
+        return np_array
 
 
 class Writer:
-    clean_directory = True
+    clean_directory = False
+    iteration = 0
     result_path = 'Results'
     picture_ext = '.jpg'
     classifier_path = 'Classifier'
     classifier_name = 'classifier'
 
-    def __init__(self, clean_dir=False):
+    def __init__(self, iteration=0, clean_dir=False):
         self.clear_result_directory()
         self.create_result_directory()
         self.create_classifier_directory()
         self.clean_directory = clean_dir
+        self.iteration = iteration
 
     def create_result_directory(self):
         if not os.path.exists(self.result_path):
@@ -74,23 +59,20 @@ class Writer:
                 os.remove(file)
 
     def save_mask(self, file_name, picture):
-        name = os.path.join(self.result_path, file_name + '_mask' + self.picture_ext)
-        cv2.imwrite(name, picture)
+        path = os.path.join(self.result_path, file_name + '_' + str(self.iteration) + self.picture_ext)
+        cv2.imwrite(path, picture)
+        return path
 
-    def save_hu_moments(self, hu_moments, decisions):
-        name = os.path.join(self.classifier_path, self.classifier_name)
-        np.save(name + '_model.npy', hu_moments)
-        np.save(name + '_decision.npy', decisions)
+    def save_numpy_array(self, file_name, numpy_array):
+        path = os.path.join(self.classifier_path, file_name + '_' + str(self.iteration))
+        np.save(path + '.npy', numpy_array)
+        return path
 
 
 class Recognition:
-    debug = True
-
-    def __init__(self, picture, mask, expert_mask, debug=True):
+    def __init__(self, picture, expert_mask):
         self.picture = picture.copy()
-        self.mask = mask.copy()
         self.expert_mask = expert_mask.copy()
-        self.debug = debug
 
     def cut_green_channel_with_contrast(self):
         wr = Writer()
@@ -118,9 +100,7 @@ class Recognition:
         image[image > threshold] = 255
         image[image <= threshold] = 0
 
-        if self.debug:
-            print('Threshold =>', threshold)
-
+        print('Threshold =>', threshold)
         return image
 
     def make_recognition(self):
@@ -306,12 +286,13 @@ class GUIWidget(QWidget):
     default_height = 280
     default_button_width = 200
     default_button_height = 40
+    show_stats = False
 
     def __init__(self):
         super().__init__()
 
         # Variables
-        self.no = 1
+        self.no = 0
         self.calculate_stats = True
         self.selected_picture = None
         self.selected_expert_mask = None
@@ -319,7 +300,7 @@ class GUIWidget(QWidget):
         self.selected_basic_decisions = None
         self.selected_basic_model = None
 
-        reader = Reader()
+        self.reader = Reader()
 
         # Labels
         self.label_picture = QLabel(self)
@@ -355,7 +336,11 @@ class GUIWidget(QWidget):
         self.button_select_basic_model.clicked.connect(lambda: self.select_basic_model())
         self.button_select_basic_decisions.clicked.connect(lambda: self.select_basic_decisions())
         self.button_select_classifier_model.clicked.connect(lambda: self.select_classifier_model())
+        self.button_show_stats.clicked.connect(lambda: self.toggle_stats())
         self.button_run_code.clicked.connect(lambda: self.run_code())
+
+        # Table - statistics
+        self.table = QTableWidget(self)
 
         # Init GUI
         self.init_ui()
@@ -364,7 +349,27 @@ class GUIWidget(QWidget):
         self.calculate_stats = self.checkbox_calculate_stats.isChecked()
 
     def run_code(self):
-        print('Not implemented yet.')
+        self.no += 1
+        writer = Writer(self.no)
+
+        picture = self.reader.read_picture(self.selected_picture)
+        self.set_image(self.picture_original_picture, self.selected_picture)
+
+        expert_mask = self.reader.read_gray_picture(self.selected_expert_mask)
+        self.set_image(self.picture_expert_mask, self.selected_expert_mask)
+
+        # Basic
+        recognition = Recognition(picture, expert_mask)
+        own_mask = recognition.make_recognition()
+        basic_mask_path = writer.save_mask('basic_mask', own_mask)
+        self.set_image(self.picture_basic_mask, basic_mask_path)
+
+        if self.calculate_stats:
+            stats = Statistics().statistics(expert_mask, own_mask)
+            self.update_table_stats('Basic alg.', stats)
+
+    def set_image(self, view, path):
+        view.setPixmap(QPixmap(path).scaled(self.default_height, self.default_width, Qt.KeepAspectRatio))
 
     def select(self):
         options = QFileDialog.Options()
@@ -434,6 +439,19 @@ class GUIWidget(QWidget):
         button.move(pos_x, pos_y)
         button.resize(self.default_button_width, self.default_button_height)
 
+    def toggle_stats(self):
+        self.table.setHidden(self.show_stats)
+        self.show_stats = not self.show_stats
+
+    def update_table_stats(self, name, stats):
+        row = self.table.rowCount()
+        self.table.insertRow(row)
+        self.table.setItem(row, 0, QTableWidgetItem(name))
+        for col, (key, value) in enumerate(stats.items()):
+            item = QTableWidgetItem(f'{value:.{5}f}')
+            item.setTextAlignment(Qt.AlignCenter)
+            self.table.setItem(row, col + 1, item)
+
     def init_ui(self):
         # Size, position, title
         self.setFixedSize(900, 640)
@@ -463,9 +481,18 @@ class GUIWidget(QWidget):
         self.place_button(self.button_run_code, 650, 180)
         self.place_button(self.button_show_stats, 650, 260)
         self.place_button(self.button_clean_calculations, 650, 290)
+        self.button_clean_calculations.setHidden(True)
 
         # Checkboxes
         self.place_checkbox(self.checkbox_calculate_stats, self.calculate_stats, 655, 240)
+
+        # Table
+        self.table.setColumnCount(8)
+        self.table.setHorizontalHeaderLabels(['Algorithm', 'Sensitivity', 'Specificity', 'FPR', 'PDR', 'Accuracy', 'PPV', 'NPV'])
+        self.table.setShowGrid(True)
+        self.table.move(10, 10)
+        self.table.resize(590, 620)
+        self.table.setHidden(True)
 
         # Show UI
         self.show()
@@ -475,25 +502,6 @@ def main():
     app = QApplication(sys.argv)
     ex = GUIWidget()
     sys.exit(app.exec_())
-
-    # file_name = '01_h'
-    # reader = Reader(file_name)
-    # writer = Writer()
-    #
-    # original_image = reader.read_picture()
-    # mask = reader.read_mask()
-    # expert_mask = reader.read_expert_mask()
-
-    #####################
-    #    Recognition    #
-    #####################
-    # recognition = Recognition(original_image, mask, expert_mask)
-    # own_mask = recognition.make_recognition()
-    # writer.save_mask(file_name, own_mask)
-    # statistics = Statistics()
-    # stats = statistics.statistics(expert_mask, own_mask)
-    # for (key, val) in stats.items():
-    #     print(f'{key} => {val:.{5}f}')
 
     #####################
     #   SimpleLearner   #
