@@ -93,15 +93,23 @@ class Recognition:
         self.debug = debug
 
     def cut_green_channel_with_contrast(self):
+        wr = Writer()
+        wr.save_mask('org', self.picture)
+        wr.save_mask('gray', cv2.cvtColor(self.picture, cv2.COLOR_BGR2GRAY))
         img = np.int16(self.picture.copy())
         img[:, :, 0] = 0
         img[:, :, 2] = 0
 
-        contrast = 15
-        brightness = 50
+        wr.save_mask('green', img)
+
+        contrast = 35
+        brightness = 90
         img = img * (contrast / 127 + 1) - contrast + brightness
         img = np.clip(img, 0, 255)
         img = np.uint8(img)
+
+        wr.save_mask('contrast_blue', img)
+        wr.save_mask('contrast_gray', cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
 
         return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -116,20 +124,29 @@ class Recognition:
         return image
 
     def make_recognition(self):
+        wr = Writer()
         gray = self.cut_green_channel_with_contrast()
+        wr.save_mask('1_cut_green', gray)
         canny_edges = cv2.Canny(gray, 150, 255, apertureSize=5, L2gradient=True)
+        wr.save_mask('2_canny', canny_edges)
 
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
         dilate = cv2.dilate(canny_edges, kernel)
+        wr.save_mask('3_dilate', dilate)
 
         median = cv2.medianBlur(dilate, 5)
+        wr.save_mask('4_median_blur', median)
 
         # pic = filters.frangi(median) # TODO it consumes to much time
+        # wr.save_mask('5_frangi', pic)
 
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
         dilate = cv2.dilate(median, kernel)
+        wr.save_mask('6_dilate', dilate)
 
-        return self.binary_response(dilate)
+        result = self.binary_response(dilate)
+        wr.save_mask('7_result', result)
+        return result
 
 
 class Statistics:
@@ -277,18 +294,32 @@ class SimpleLearner:
                 vec.append(cv2.HuMoments(cv2.moments(cut)).flatten())
 
             temp.append(classifier.predict(vec))
+            print(row)
 
         response_image[mask_radius:max_height+1, mask_radius:max_width+1] = temp
         return response_image
 
 
 class GUIWidget(QWidget):
+    placeholder_image_path = 'Files/image_not_available.jpg'
+    default_width = 280
+    default_height = 280
+    default_button_width = 200
+    default_button_height = 40
+
     def __init__(self):
         super().__init__()
 
         # Variables
         self.no = 1
         self.calculate_stats = True
+        self.selected_picture = None
+        self.selected_expert_mask = None
+        self.selected_classifier_model = None
+        self.selected_basic_decisions = None
+        self.selected_basic_model = None
+
+        reader = Reader()
 
         # Labels
         self.label_picture = QLabel(self)
@@ -307,12 +338,24 @@ class GUIWidget(QWidget):
         # Buttons
         self.button_clean_calculations = QPushButton('Clean calculations', self)
         self.button_show_stats = QPushButton('Show statistics', self)
+        self.button_select_picture = QPushButton('Select picture', self)
+        self.button_select_expert_mask = QPushButton('Select expert mask', self)
+        self.button_select_basic_model = QPushButton('Select basic model', self)
+        self.button_select_basic_decisions = QPushButton('Select decisions model', self)
+        self.button_select_classifier_model = QPushButton('Select classifier model', self)
+        self.button_run_code = QPushButton('Run calculations', self)
 
         # Checkboxes
         self.checkbox_calculate_stats = QCheckBox('Calculate statistics', self)
 
         # Actions
         self.checkbox_calculate_stats.stateChanged.connect(lambda: self.calculate_stats_change())
+        self.button_select_picture.clicked.connect(lambda: self.select_picture())
+        self.button_select_expert_mask.clicked.connect(lambda: self.select_expert_mask())
+        self.button_select_basic_model.clicked.connect(lambda: self.select_basic_model())
+        self.button_select_basic_decisions.clicked.connect(lambda: self.select_basic_decisions())
+        self.button_select_classifier_model.clicked.connect(lambda: self.select_classifier_model())
+        self.button_run_code.clicked.connect(lambda: self.run_code())
 
         # Init GUI
         self.init_ui()
@@ -320,17 +363,109 @@ class GUIWidget(QWidget):
     def calculate_stats_change(self):
         self.calculate_stats = self.checkbox_calculate_stats.isChecked()
 
+    def run_code(self):
+        print('Not implemented yet.')
+
+    def select(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        file_name, _ = QFileDialog.getOpenFileName(self, "QFileDialog.getOpenFileName()", "",
+                                                   "Images (*.png *.tif *.jpg)", options=options)
+
+        return file_name
+
+    def select_numpy(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        file_name, _ = QFileDialog.getOpenFileName(self, "QFileDialog.getOpenFileName()", "",
+                                                   "Numpy files (*.npy)", options=options)
+
+        return file_name
+
+    def select_picture(self):
+        file_name = self.select()
+        if file_name:
+            self.selected_picture = file_name.lower()
+
+    def select_expert_mask(self):
+        file_name = self.select()
+        if file_name:
+            self.selected_expert_mask = file_name.lower()
+
+    def select_basic_model(self):
+        file_name = self.select_numpy()
+        if file_name:
+            self.selected_basic_model = file_name.lower()
+
+    def select_basic_decisions(self):
+        file_name = self.select_numpy()
+        if file_name:
+            self.selected_basic_decisions = file_name.lower()
+
+    def select_classifier_model(self):
+        file_name = self.select()
+        # TODO correct select
+        if file_name:
+            self.selected_classifier_model = file_name.lower()
+
     def center(self):
         qr = self.frameGeometry()
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
 
+    def set_placeholder(self, picture):
+        picture.setPixmap(QPixmap(self.placeholder_image_path).scaled(self.default_height, self.default_width, Qt.KeepAspectRatio))
+
+    def place_picture(self, picture, pos_x, pos_y):
+        picture.move(pos_x, pos_y)
+        picture.resize(self.default_width, self.default_height)
+        self.set_placeholder(picture)
+
+    def place_label(self, label, pos_x, pos_y, text):
+        label.setText(text)
+        label.move(pos_x, pos_y)
+
+    def place_checkbox(self, checkbox, is_checked, pos_x, pos_y):
+        checkbox.move(pos_x, pos_y)
+        checkbox.setChecked(is_checked)
+
+    def place_button(self, button, pos_x, pos_y):
+        button.move(pos_x, pos_y)
+        button.resize(self.default_button_width, self.default_button_height)
+
     def init_ui(self):
         # Size, position, title
-        self.setFixedSize(880, 680)
+        self.setFixedSize(900, 640)
         self.center()
         self.setWindowTitle('Vessels recognition')
+
+        # Pictures
+        self.place_picture(self.picture_original_picture, 15, 30)
+        self.place_picture(self.picture_expert_mask, 310, 30)
+        self.place_picture(self.picture_basic_mask, 15, 350)
+        self.place_picture(self.picture_simple_learn_mask, 310, 350)
+        self.place_picture(self.picture_rf_mask, 605, 350)
+
+        # Labels
+        self.place_label(self.label_picture, 25, 10, 'Picture')
+        self.place_label(self.label_expert_mask, 320, 10, 'Expert mask')
+        self.place_label(self.label_basic_mask, 25, 330, 'Basic mask')
+        self.place_label(self.label_simple_learn_mask, 320, 330, 'kNN mask')
+        self.place_label(self.label_rf_mask, 615, 330, 'Random Forest mask')
+
+        # Buttons
+        self.place_button(self.button_select_picture, 650, 30)
+        self.place_button(self.button_select_expert_mask, 650, 60)
+        self.place_button(self.button_select_basic_model, 650, 90)
+        self.place_button(self.button_select_basic_decisions, 650, 120)
+        self.place_button(self.button_select_classifier_model, 650, 150)
+        self.place_button(self.button_run_code, 650, 180)
+        self.place_button(self.button_show_stats, 650, 260)
+        self.place_button(self.button_clean_calculations, 650, 290)
+
+        # Checkboxes
+        self.place_checkbox(self.checkbox_calculate_stats, self.calculate_stats, 655, 240)
 
         # Show UI
         self.show()
@@ -374,7 +509,7 @@ def main():
     #####################
     #   SciKit -> kNN   #
     #####################
-    # near_neighbors = KNeighborsClassifier(n_neighbors=5, n_jobs=-1)
+    # near_neighbors = KNeighborsClassifier(n_neighbors=3, n_jobs=-1)
     # near_neighbors.fit(hu_moments, decisions)
     # resp_image = learner.knn_prepare_response(near_neighbors)
     # plt.imshow(resp_image, cmap='gray')
@@ -407,12 +542,12 @@ if __name__ == "__main__":
 # * Make decision [DONE]
 # * Make binary response - analytics all pixels and check decision from Learner [DONE]
 # * KNeighborsClassifier [DONE]
+# * PyQT GUI [DONE]
+# * Enable make actions from GUI [DONE]
 
 # TODO LIST
 # * RandomForest Classifier
 # * Cross validation
-# * PyQT GUI
-# * Enable make actions from GUI
 # * Machine Learning with SciKit
 
 # OPTIONAL
