@@ -174,7 +174,7 @@ class Statistics:
 
 class SimpleLearner:
     mask_size = 5
-    total_elements = 10_000
+    total_elements = 100_000
     slice_size = 10
     median_blur_size = 5
     dilate_mask_size = 3
@@ -259,9 +259,6 @@ class SimpleLearner:
                 vec.append(cut.flatten())
 
             temp.append(classifier.predict(vec))
-
-            # TODO debug only
-            print(row)
 
         response_image[mask_radius:max_height, mask_radius:max_width] = temp
 
@@ -428,7 +425,7 @@ class GUIWidget(QWidget):
         if self.selected_classifier_model_knn:
             knn_classifier = joblib.load(self.selected_classifier_model_knn)
             knn_learner = SimpleLearner(expert_mask, picture)
-            own_mask = knn_learner.classifier_prepare_response(knn_classifier, filtering=False)
+            own_mask = knn_learner.classifier_prepare_response(knn_classifier, filtering=True)
 
             knn_mask_path = writer.save_mask('knn_mask', own_mask)
             self.set_image(self.picture_simple_learn_mask, knn_mask_path)
@@ -606,69 +603,52 @@ class GUIWidget(QWidget):
 
 
 def main():
-    app = QApplication(sys.argv)
-    ex = GUIWidget()
-    sys.exit(app.exec_())
+    # app = QApplication(sys.argv)
+    # ex = GUIWidget()
+    # sys.exit(app.exec_())
 
-    # reader = Reader()
-    # original_image = reader.read_picture('Files/pictures/01_h.jpg')
-    # expert_mask = reader.read_gray_picture('Files/expert_results/01_h.tif')
+    # file = open('results.txt', 'w+')
 
-    #####################
-    #   SimpleLearner   #
-    #####################
-    # learner = SimpleLearner(expert_mask, original_image)
-    # cut_masks, decisions = learner.learn()
-    # knn = KNeighborsClassifier(n_neighbors=3)
-    # knn.fit(cut_masks, decisions)
-    # joblib.dump(knn, 'Classifier/knn_classifier_21_10000.pkl')
-    # writer.save_hu_moments(hu_moments, decisions)
-    # r_hu, r_d = reader.read_hu_moments()
-    # img = learner.prepare_response(r_hu, r_d)
-    # plt.imshow(img, cmap='gray')
-    # plt.show()
+    for file_name in ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15']:
+        reader = Reader()
+        original_image = reader.read_picture(f'Files/pictures/{file_name}_h.jpg')
+        expert_mask = reader.read_gray_picture(f'Files/expert_results/{file_name}_h.tif')
 
-    #####################
-    #   SciKit -> kNN   #
-    #####################
-    # near_neighbors = KNeighborsClassifier(n_neighbors=3, n_jobs=-1)
-    # near_neighbors.fit(hu_moments, decisions)
-    # resp_image = learner.knn_prepare_response(near_neighbors)
-    # plt.imshow(resp_image, cmap='gray')
-    # plt.show()
+        ####################
+        # Image Processing #
+        ####################
+        # r = Recognition(original_image, expert_mask)
+        # result = r.make_recognition()
 
-    #####################
-    #   Random Forest   #
-    #####################
-    # random_forest = RandomForestClassifier()
-    # random_forest.fit(cut_masks, decisions)
-    # joblib.dump(random_forest, 'Classifier/rf_classifier_5_10000.pkl')
-    # arr = learner.classifier_prepare_response(random_forest)
-    # wr = Writer(21)
-    # wr.save_numpy_array('rf_basic', arr)
-    # r = Reader()
-    # arr = r.read_numpy_array('Classifier/rf_basic_11.npy')
-    # plt.imshow(arr, cmap='gray')
-    # plt.show()
-    #
-    # x = stats.statistics(expert_mask, arr)
-    # for (key, value) in x.items():
-    #     print(str(key) + ' => ' + str(value))
-    #
-    # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-    # res = cv2.dilate(arr, kernel)
-    # res = cv2.medianBlur(res, ksize=5)
-    #
-    # plt.imshow(res, cmap='gray')
-    # plt.show()
-    #
-    # x = stats.statistics(expert_mask, res)
-    # for (key, value) in x.items():
-    #     print(str(key) + ' => ' + str(value))
+        learner = SimpleLearner(expert_mask, original_image)
+        writer = Writer(learner.total_elements)
+        # writer.save_mask(f'{file_name}_basic', result)
+        cut_masks, decisions = learner.learn()
+        # knn = KNeighborsClassifier(n_neighbors=3)
+        # knn.fit(cut_masks, decisions)
+        # resp_image = learner.classifier_prepare_response(knn, True)
+        # writer.save_mask(f'{file_name}_{learner.mask_size}_knn', resp_image)
 
-    # arr = learner.classifier_prepare_response(random_forest)
-    # wr = Writer(2110)
-    # wr.save_numpy_array('rf_basic', arr)
+        random_forest = RandomForestClassifier()
+        random_forest.fit(cut_masks, decisions)
+        arr = learner.classifier_prepare_response(random_forest, True)
+        writer.save_mask(f'{file_name}_{learner.mask_size}_rf', arr)
+        print(file_name)
+
+        # file.write('Elements => ' + str(learner.total_elements) + '\n')
+        # file.write('Mask => ' + str(learner.mask_size) + '\n')
+
+        # file.write('Basic\n')
+        # stats = Statistics().statistics(expert_mask, result)
+        # for (key, value) in stats.items():
+        #     file.write(str(key) + ' => ' + str(value) + '\n')
+
+        # file.write('Random Forest\n')
+        # stats = Statistics().statistics(expert_mask, arr)
+        # for (key, value) in stats.items():
+        #     file.write(str(key) + ' => ' + str(value) + '\n')
+
+    # os.close(file)
 
 
 if __name__ == "__main__":
@@ -699,6 +679,4 @@ if __name__ == "__main__":
 # * Machine Learning with SciKit [DONE]
 # * Save classifier [DONE]
 # * Load classifier [DONE]
-
-# TODO LIST
-# * Python script to prepare classifier
+# * Python script to prepare classifier [DONE]
