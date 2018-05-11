@@ -173,7 +173,7 @@ class Statistics:
 
 
 class SimpleLearner:
-    mask_size = 5
+    mask_size = 21
     total_elements = 100_000
     slice_size = 10
     median_blur_size = 5
@@ -603,80 +603,27 @@ class GUIWidget(QWidget):
 
 
 def main():
-    # app = QApplication(sys.argv)
-    # ex = GUIWidget()
-    # sys.exit(app.exec_())
+    app = QApplication(sys.argv)
+    ex = GUIWidget()
+    sys.exit(app.exec_())
 
-    # file = open('results.txt', 'w+')
-
-    for file_name in ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15']:
-        reader = Reader()
-        original_image = reader.read_picture(f'Files/pictures/{file_name}_h.jpg')
-        expert_mask = reader.read_gray_picture(f'Files/expert_results/{file_name}_h.tif')
-
-        ####################
-        # Image Processing #
-        ####################
-        # r = Recognition(original_image, expert_mask)
-        # result = r.make_recognition()
-
-        learner = SimpleLearner(expert_mask, original_image)
-        writer = Writer(learner.total_elements)
-        # writer.save_mask(f'{file_name}_basic', result)
-        cut_masks, decisions = learner.learn()
-        # knn = KNeighborsClassifier(n_neighbors=3)
-        # knn.fit(cut_masks, decisions)
-        # resp_image = learner.classifier_prepare_response(knn, True)
-        # writer.save_mask(f'{file_name}_{learner.mask_size}_knn', resp_image)
-
-        random_forest = RandomForestClassifier()
-        random_forest.fit(cut_masks, decisions)
-        arr = learner.classifier_prepare_response(random_forest, True)
-        writer.save_mask(f'{file_name}_{learner.mask_size}_rf', arr)
-        print(file_name)
-
-        # file.write('Elements => ' + str(learner.total_elements) + '\n')
-        # file.write('Mask => ' + str(learner.mask_size) + '\n')
-
-        # file.write('Basic\n')
-        # stats = Statistics().statistics(expert_mask, result)
-        # for (key, value) in stats.items():
-        #     file.write(str(key) + ' => ' + str(value) + '\n')
-
-        # file.write('Random Forest\n')
-        # stats = Statistics().statistics(expert_mask, arr)
-        # for (key, value) in stats.items():
-        #     file.write(str(key) + ' => ' + str(value) + '\n')
-
-    # os.close(file)
+    # file_name = '06'
+    # reader = Reader()
+    # expert_mask = reader.read_gray_picture(f'Files/expert_results/{file_name}_h.tif')
+    #
+    # print('File', file_name)
+    # print('Random Forest statistics')
+    # own_mask = reader.read_gray_picture(f'Results/21_100000/{file_name}_21_rf_100000.jpg')
+    # stats = Statistics().statistics(expert_mask, own_mask)
+    # for (key, value) in stats.items():
+    #     print(key, value)
+    #
+    # print('\nBasic statistics')
+    # own_mask = reader.read_gray_picture(f'Results/21_100000/{file_name}_basic_100000.jpg')
+    # stats = Statistics().statistics(expert_mask, own_mask)
+    # for (key, value) in stats.items():
+    #     print(key, value)
 
 
 if __name__ == "__main__":
     main()
-
-# DONE LIST
-# * Read image [DONE]
-# * Read expert mask [DONE]
-# * Select only green channel from image [DONE]
-# * Dilatation [DONE]
-# * MedianBlur [DONE]
-# * Frangi filter to prepare continuous edges [DONE]
-# * Prepare binary response (0/1 - vessel or not) as own mask [DONE]
-# * Save result as picture [DONE]
-# * Compare own mask with expert mask [DONE]
-# * Calculate statistics [DONE]
-# * Calculate Hu moments - picture analytics [DONE]
-# * Save Hu moments to file [DONE]
-# * Load Hu moments from file [DONE]
-# * Calculate similarity from Hu moments and array from Learner [DONE]
-# * Make decision [DONE]
-# * Make binary response - analytics all pixels and check decision from Learner [DONE]
-# * KNeighborsClassifier [DONE]
-# * PyQT GUI [DONE]
-# * Enable make actions from GUI [DONE]
-# * RandomForest Classifier [DONE]
-# * Cross validation [DONE]
-# * Machine Learning with SciKit [DONE]
-# * Save classifier [DONE]
-# * Load classifier [DONE]
-# * Python script to prepare classifier [DONE]
