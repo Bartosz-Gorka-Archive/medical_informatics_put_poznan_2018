@@ -3,13 +3,15 @@ import constPaths from '@/constants/constant-paths.js'
 
 const state = {
   observations: [],
+  selectedObservation: null,
   loadingObservations: true,
   nextUrl: constPaths.OBSERVATION_URL
 }
 
 const getters = {
   observations: state => state.observations,
-  loadingObservations: state => state.loadingObservations
+  loadingObservations: state => state.loadingObservations,
+  selectedObservation: state => state.selectedObservation
 }
 
 const actions = {
@@ -18,6 +20,14 @@ const actions = {
     .then(data => {
       commit('setList', data)
       return state.observations
+    })
+    .catch(error => Promise.reject(error))
+  },
+  getSingleObservation ({ state, commit }, statementID) {
+    return api.fetch(constPaths.OBSERVATION_URL + statementID)
+    .then(data => {
+      commit('setSelectedObservation', data)
+      return state.selectedObservation
     })
     .catch(error => Promise.reject(error))
   },
@@ -37,6 +47,9 @@ const mutations = {
       state.nextUrl = constPaths.OBSERVATION_URL
       state.loadingObservations = false
     }
+  },
+  setSelectedObservation (state, data) {
+    state.selectedObservation = data
   },
   clear (state) {
     state.observations = []

@@ -47,6 +47,11 @@ const router = new Router({
           path: 'observations',
           name: 'observations',
           component: load('views/Observations')
+        },
+        {
+          path: 'observations/:observationID',
+          name: 'single-observation',
+          component: load('views/SingleObservation')
         }
       ]
     },

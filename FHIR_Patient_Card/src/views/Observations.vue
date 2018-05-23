@@ -42,7 +42,11 @@
         <template v-for="(observation, index) in this.observations">
           <tr>
             <td data-label="No" class="u-hiddenDown@md">{{ index + 1 }}</td>
-            <td data-label="ID">{{ get(['resource', 'id'], observation) }}</td>
+            <td data-label="ID">
+              <router-link :to="{ name: 'single-observation', params: { observationID: get(['resource', 'id'], observation) }}">
+                {{ get(['resource', 'id'], observation) }}
+              </router-link>
+            </td>
             <td data-label="Code">{{ get(['resource', 'code', 'coding', 0, 'code'], observation) }}</td>
             <td data-label="Display">{{ get(['resource', 'code', 'coding', 0, 'display'], observation) }}</td>
             <td data-label="Status">{{ get(['resource', 'status'], observation) }}</td>
