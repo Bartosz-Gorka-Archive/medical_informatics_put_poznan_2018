@@ -18,6 +18,12 @@
             </div>
             <div class="c-menu__text">Medications</div>
           </router-link>
+          <router-link :to="{ name: 'statements' }" class="c-menu__link">
+            <div class="c-menu__icon">
+              <i class="icon-aid-kit2"></i>
+            </div>
+            <div class="c-menu__text">Statements</div>
+          </router-link>
           <router-link :to="{ name: 'observations' }" class="c-menu__link">
             <div class="c-menu__icon">
               <i class="icon-eye"></i>
