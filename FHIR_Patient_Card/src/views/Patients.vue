@@ -16,6 +16,17 @@
     </header>
 
     <div>
+      <div class="l-row u-pb-15">
+        <div class="l-col-6@md">
+          <input
+            v-model="this.familyName"
+            @keyup.enter=setFamilyNameFilter(this.familyName)
+            type="text"
+            class="form-input"
+            placeholder="Find patient by family name">
+        </div>
+      </div>
+
       <table class="table table--data">
         <thead>
           <tr>
@@ -69,11 +80,14 @@
 
   export default {
     name: 'PatientsView',
-    computed: mapGetters(['loadingPatients', 'patients']),
+    computed: mapGetters(['loadingPatients', 'patients', 'familyName']),
     mounted () {
       mapActions(['clear'])
     },
     methods: {
+      setFamilyNameFilter (name) {
+        this.$store.dispatch('patient/setFindByFamilyName', name)
+      },
       secureShowFamilyName (record) {
         if ('name' in record) {
           if (Array.isArray(record.name) && record.name.length >= 1) {
@@ -82,13 +96,12 @@
             }
           }
         }
-        return '<details not found>'
+        return ''
       },
       infiniteHandler (state) {
         this.$store.dispatch('patient/getPatients')
         .then(data => {
           mapGetters(['loadingPatients', 'patients'])
-
           if (this.loadingPatients) {
             state.loaded()
           } else {
