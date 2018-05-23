@@ -52,11 +52,11 @@
           <template v-for="(patient, index) in this.patients">
             <tr>
               <td data-label="No" class="u-hiddenDown@md">{{ index + 1 }}</td>
-              <td data-label="ID">{{ patient.resource.id }}</td>
-              <td data-label="Family name">{{ secureShowFamilyName(patient.resource) }}</td>
-              <td data-label="Gender">{{ patient.resource.gender }}</td>
-              <td data-label="Birthdate">{{ patient.resource.birthDate }}</td>
-              <td data-label="Active">{{ patient.resource.active }}</td>
+              <td data-label="ID">{{ get(['resource', 'id'], patient) }}</td>
+              <td data-label="Family name">{{ get(['resource', 'name', 0, 'family'], patient) }}</td>
+              <td data-label="Gender">{{ get(['resource', 'gender'], patient) }}</td>
+              <td data-label="Birthdate">{{ get(['resource', 'birthDate'], patient) }}</td>
+              <td data-label="Active">{{ get(['resource', 'active'], patient) }}</td>
             </tr>
           </template>
 
@@ -85,18 +85,11 @@
       mapActions(['clear'])
     },
     methods: {
+      get (p, o) {
+        return p.reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, o)
+      },
       setFamilyNameFilter (name) {
         this.$store.dispatch('patient/setFindByFamilyName', name)
-      },
-      secureShowFamilyName (record) {
-        if ('name' in record) {
-          if (Array.isArray(record.name) && record.name.length >= 1) {
-            if ('family' in record.name[0]) {
-              return record.name[0].family
-            }
-          }
-        }
-        return ''
       },
       infiniteHandler (state) {
         this.$store.dispatch('patient/getPatients')

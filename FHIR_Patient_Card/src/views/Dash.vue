@@ -12,6 +12,12 @@
             </div>
             <div class="c-menu__text">Patients</div>
           </router-link>
+          <router-link :to="{ name: 'medications' }" class="c-menu__link">
+            <div class="c-menu__icon">
+              <i class="icon-pill"></i>
+            </div>
+            <div class="c-menu__text">Medications</div>
+          </router-link>
         </li>
       </ul>
     </sidebar>

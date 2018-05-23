@@ -15,7 +15,7 @@ const getters = {
 
 const actions = {
   getPatients ({ state, commit }) {
-    return api.fetch_patients(state.nextUrl)
+    return api.fetch(state.nextUrl)
     .then(data => {
       commit('setList', data)
       return state.patients
