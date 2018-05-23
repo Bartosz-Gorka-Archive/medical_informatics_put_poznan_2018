@@ -40,7 +40,11 @@
         <template v-for="(statement, index) in this.statements">
           <tr>
             <td data-label="No" class="u-hiddenDown@md">{{ index + 1 }}</td>
-            <td data-label="ID">{{ get(['resource', 'id'], statement) }}</td>
+            <td data-label="ID">
+              <router-link :to="{ name: 'single-statement', params: { statementID: get(['resource', 'id'], statement) }}">
+                {{ get(['resource', 'id'], statement) }}
+              </router-link>
+            </td>
             <td data-label="Taken">{{ taken(get(['resource', 'taken'], statement)) }}</td>
             <td data-label="Dosage">{{ get(['resource', 'dosage', 0, 'text'], statement) }}</td>
             <td data-label="Concept" v-if="get(['resource', 'medicationCodeableConcept', 'text'], statement)">

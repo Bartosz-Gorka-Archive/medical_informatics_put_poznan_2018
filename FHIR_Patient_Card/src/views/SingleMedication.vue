@@ -7,12 +7,12 @@
           <i class="icon-footprint"></i>
         </div>
         <div class="c-cell__content">
-          <h1 class="c-toolbar__title">Medication {{ get(['resource', 'id'], selectedMedication)}}</h1>
+          <h1 class="c-toolbar__title">Medication {{ get(['id'], selectedMedication)}}</h1>
           <ol class="c-breadcrumb">
             <li class="c-breadcrumb__item">
               <router-link :to="{ name: 'medications' }" class="c-breadcrumb__link">Medications</router-link>
             </li>
-            <li class="c-breadcrumb__item">Medication {{ get(['resource', 'id'], selectedMedication)}}</li>
+            <li class="c-breadcrumb__item">Medication {{ get(['id'], selectedMedication)}}</li>
           </ol>
         </div>
       </div>

@@ -39,6 +39,11 @@ const router = new Router({
           component: load('views/Statements')
         },
         {
+          path: 'statements/:statementID',
+          name: 'single-statement',
+          component: load('views/SingleStatement')
+        },
+        {
           path: 'observations',
           name: 'observations',
           component: load('views/Observations')
