@@ -15,55 +15,54 @@
       </div>
     </header>
 
-      <table class="table table--data">
-        <thead>
+    <table class="table table--data">
+      <thead>
+        <tr>
+          <th class="u-hiddenDown@md">No</th>
+          <th>ID</th>
+          <th>Code</th>
+          <th>Display</th>
+          <th>Status</th>
+          <th>Value</th>
+          <th>Subject</th>
+        </tr>
+      </thead>
+      <tfoot>
+        <tr>
+          <th class="u-hiddenDown@md">No</th>
+          <th>ID</th>
+          <th>Code</th>
+          <th>Display</th>
+          <th>Status</th>
+          <th>Value</th>
+          <th>Subject</th>
+        </tr>
+      </tfoot>
+      <tbody>
+        <template v-for="(observation, index) in this.observations">
           <tr>
-            <th class="u-hiddenDown@md">No</th>
-            <th>ID</th>
-            <th>Code</th>
-            <th>Display</th>
-            <th>Status</th>
-            <th>Value</th>
-            <th>Subject</th>
+            <td data-label="No" class="u-hiddenDown@md">{{ index + 1 }}</td>
+            <td data-label="ID">{{ get(['resource', 'id'], observation) }}</td>
+            <td data-label="Code">{{ get(['resource', 'code', 'coding', 0, 'code'], observation) }}</td>
+            <td data-label="Display">{{ get(['resource', 'code', 'coding', 0, 'display'], observation) }}</td>
+            <td data-label="Status">{{ get(['resource', 'status'], observation) }}</td>
+            <td data-label="Value">{{ get(['resource', 'valueQuantity', 'value'], observation) }} {{ get(['resource', 'valueQuantity', 'unit'], observation) }}</td>
+            <td data-label="Subject" v-if="get(['resource', 'subject', 'reference'], observation)">
+              <router-link :to="{ name: 'single-patient', params: { patientID: get(['resource', 'subject', 'reference'], observation) }}">{{ get(['resource', 'subject', 'reference'], observation) }}</router-link>
+            </td>
+            <td data-label="Subject" v-else></td>
           </tr>
-        </thead>
-        <tfoot>
-          <tr>
-            <th class="u-hiddenDown@md">No</th>
-            <th>ID</th>
-            <th>Code</th>
-            <th>Display</th>
-            <th>Status</th>
-            <th>Value</th>
-            <th>Subject</th>
-          </tr>
-        </tfoot>
-        <tbody>
-          <template v-for="(observation, index) in this.observations">
-            <tr>
-              <td data-label="No" class="u-hiddenDown@md">{{ index + 1 }}</td>
-              <td data-label="ID">{{ get(['resource', 'id'], observation) }}</td>
-              <td data-label="Code">{{ get(['resource', 'code', 'coding', 0, 'code'], observation) }}</td>
-              <td data-label="Display">{{ get(['resource', 'code', 'coding', 0, 'display'], observation) }}</td>
-              <td data-label="Status">{{ get(['resource', 'status'], observation) }}</td>
-              <td data-label="Value">{{ get(['resource', 'valueQuantity', 'value'], observation) }} {{ get(['resource', 'valueQuantity', 'unit'], observation) }}</td>
-              <td data-label="Subject" v-if="get(['resource', 'subject', 'reference'], observation)">
-                <router-link :to="{ name: 'single-patient', params: { patientID: get(['resource', 'subject', 'reference'], observation) }}">{{ get(['resource', 'subject', 'reference'], observation) }}</router-link>
-              </td>
-              <td data-label="Subject" v-else></td>
-            </tr>
-          </template>
+        </template>
 
-        <infinite-loading
-          v-if="loadingObservations"
-          v-on:infinite="infiniteHandler"
-          ref="infiniteLoading"
-          spinner="bubbles">
-        </infinite-loading>
+      <infinite-loading
+        v-if="loadingObservations"
+        v-on:infinite="infiniteHandler"
+        ref="infiniteLoading"
+        spinner="bubbles">
+      </infinite-loading>
 
-        </tbody>
-      </table>
-    </div>
+      </tbody>
+    </table>
 
   </main>
 </template>

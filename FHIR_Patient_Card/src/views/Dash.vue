@@ -22,7 +22,7 @@
             <div class="c-menu__icon">
               <i class="icon-aid-kit2"></i>
             </div>
-            <div class="c-menu__text">Statements</div>
+            <div class="c-menu__text">M. Statements</div>
           </router-link>
           <router-link :to="{ name: 'observations' }" class="c-menu__link">
             <div class="c-menu__icon">

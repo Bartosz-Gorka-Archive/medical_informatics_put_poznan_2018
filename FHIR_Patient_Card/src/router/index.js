@@ -31,7 +31,7 @@ const router = new Router({
         {
           path: 'medications/:medicationID',
           name: 'single-medication',
-          component: load('views/Medications') // TODO
+          component: load('views/SingleMedication')
         },
         {
           path: 'statements',

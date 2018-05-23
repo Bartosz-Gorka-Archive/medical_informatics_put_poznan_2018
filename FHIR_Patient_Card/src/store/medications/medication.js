@@ -3,13 +3,15 @@ import constPaths from '@/constants/constant-paths.js'
 
 const state = {
   medications: [],
+  selectedMedication: null,
   loadingMedications: true,
   nextUrl: constPaths.MEDICATION_URL
 }
 
 const getters = {
   medications: state => state.medications,
-  loadingMedications: state => state.loadingMedications
+  loadingMedications: state => state.loadingMedications,
+  selectedMedication: state => state.selectedMedication
 }
 
 const actions = {
@@ -18,6 +20,14 @@ const actions = {
     .then(data => {
       commit('setList', data)
       return state.medications
+    })
+    .catch(error => Promise.reject(error))
+  },
+  getSingleMedication ({ state, commit }, medicationID) {
+    return api.fetch(constPaths.MEDICATION_URL + medicationID)
+    .then(data => {
+      commit('setSelectedMedication', data)
+      return state.selectedMedication
     })
     .catch(error => Promise.reject(error))
   },
@@ -37,6 +47,9 @@ const mutations = {
       state.nextUrl = constPaths.MEDICATION_URL
       state.loadingMedications = false
     }
+  },
+  setSelectedMedication (state, data) {
+    state.selectedMedication = data
   },
   clear (state) {
     state.medications = []
