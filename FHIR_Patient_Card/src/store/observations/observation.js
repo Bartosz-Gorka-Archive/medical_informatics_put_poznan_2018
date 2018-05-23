@@ -1,9 +1,10 @@
 import api from '@/api.js'
+import constPaths from '@/constants/constant-paths.js'
 
 const state = {
   observations: [],
   loadingObservations: true,
-  nextUrl: 'http://hapi.fhir.org/baseDstu3/Observation'
+  nextUrl: constPaths.OBSERVATION_URL
 }
 
 const getters = {
@@ -33,13 +34,13 @@ const mutations = {
       state.nextUrl = data.link[1].url
       state.loadingObservations = true
     } else {
-      state.nextUrl = 'http://hapi.fhir.org/baseDstu3/Observation'
+      state.nextUrl = constPaths.OBSERVATION_URL
       state.loadingObservations = false
     }
   },
   clear (state) {
     state.observations = []
-    state.nextUrl = 'http://hapi.fhir.org/baseDstu3/Observation'
+    state.nextUrl = constPaths.OBSERVATION_URL
     state.loadingObservations = true
   }
 }

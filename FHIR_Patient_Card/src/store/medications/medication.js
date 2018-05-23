@@ -1,9 +1,10 @@
 import api from '@/api.js'
+import constPaths from '@/constants/constant-paths.js'
 
 const state = {
   medications: [],
   loadingMedications: true,
-  nextUrl: 'http://hapi.fhir.org/baseDstu3/Medication'
+  nextUrl: constPaths.MEDICATION_URL
 }
 
 const getters = {
@@ -33,13 +34,13 @@ const mutations = {
       state.nextUrl = data.link[1].url
       state.loadingMedications = true
     } else {
-      state.nextUrl = 'http://hapi.fhir.org/baseDstu3/Medication'
+      state.nextUrl = constPaths.MEDICATION_URL
       state.loadingMedications = false
     }
   },
   clear (state) {
     state.medications = []
-    state.nextUrl = 'http://hapi.fhir.org/baseDstu3/Medication'
+    state.nextUrl = constPaths.MEDICATION_URL
     state.loadingMedications = true
   }
 }

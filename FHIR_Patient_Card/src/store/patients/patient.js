@@ -1,10 +1,11 @@
 import api from '@/api.js'
+import constPaths from '@/constants/constant-paths.js'
 
 const state = {
   patients: [],
   loadingPatients: true,
   familyName: '',
-  nextUrl: 'http://hapi.fhir.org/baseDstu3/Patient'
+  nextUrl: constPaths.PATIENT_URL
 }
 
 const getters = {
@@ -36,7 +37,7 @@ const mutations = {
     state.patients = []
     state.familyName = name
     state.loadingPatients = true
-    state.nextUrl = 'http://hapi.fhir.org/baseDstu3/Patient?family=' + name
+    state.nextUrl = constPaths.PATIENT_URL + '?family=' + name
   },
   setList (state, data) {
     state.patients = [...state.patients, ...data.entry]
@@ -44,13 +45,13 @@ const mutations = {
       state.nextUrl = data.link[1].url
       state.loadingPatients = true
     } else {
-      state.nextUrl = 'http://hapi.fhir.org/baseDstu3/Patient'
+      state.nextUrl = constPaths.PATIENT_URL
       state.loadingPatients = false
     }
   },
   clear (state) {
     state.patients = []
-    state.nextUrl = 'http://hapi.fhir.org/baseDstu3/Patient'
+    state.nextUrl = constPaths.PATIENT_URL
     state.loadingPatients = true
   }
 }
