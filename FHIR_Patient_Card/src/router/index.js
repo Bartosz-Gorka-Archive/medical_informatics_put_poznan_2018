@@ -21,7 +21,7 @@ const router = new Router({
         {
           path: 'patients/:patientID',
           name: 'single-patient',
-          component: load('views/Patients') // TODO
+          component: load('views/SinglePatient')
         },
         {
           path: 'medications',

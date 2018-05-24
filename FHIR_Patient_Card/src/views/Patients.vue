@@ -52,7 +52,11 @@
           <template v-for="(patient, index) in this.patients">
             <tr>
               <td data-label="No" class="u-hiddenDown@md">{{ index + 1 }}</td>
-              <td data-label="ID">{{ get(['resource', 'id'], patient) }}</td>
+              <td data-label="ID">
+                <router-link :to="{ name: 'single-patient', params: { patientID: get(['resource', 'id'], patient) }}">
+                  {{ get(['resource', 'id'], patient) }}
+                </router-link>
+              </td>
               <td data-label="Family name">{{ get(['resource', 'name', 0, 'family'], patient) }}</td>
               <td data-label="Gender">{{ get(['resource', 'gender'], patient) }}</td>
               <td data-label="Birthdate">{{ get(['resource', 'birthDate'], patient) }}</td>

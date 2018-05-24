@@ -4,14 +4,16 @@ import constPaths from '@/constants/constant-paths.js'
 const state = {
   patients: [],
   loadingPatients: true,
+  selectedPatient: null,
   familyName: '',
-  nextUrl: constPaths.PATIENT_URL
+  nextUrl: constPaths.PATIENT_URL + '$everything'
 }
 
 const getters = {
   patients: state => state.patients,
   loadingPatients: state => state.loadingPatients,
-  familyName: state => state.familyName
+  familyName: state => state.familyName,
+  selectedPatient: state => state.selectedPatient
 }
 
 const actions = {
@@ -20,6 +22,14 @@ const actions = {
     .then(data => {
       commit('setList', data)
       return state.patients
+    })
+    .catch(error => Promise.reject(error))
+  },
+  getSinglePatient ({ state, commit }, patientID) {
+    return api.fetch(constPaths.PATIENT_URL + patientID)
+    .then(data => {
+      commit('setSelectedPatient', data)
+      return state.selectedPatient
     })
     .catch(error => Promise.reject(error))
   },
@@ -38,6 +48,9 @@ const mutations = {
     state.familyName = name
     state.loadingPatients = true
     state.nextUrl = constPaths.PATIENT_URL + '?family=' + name
+  },
+  setSelectedPatient (state, data) {
+    state.selectedPatient = data
   },
   setList (state, data) {
     state.patients = [...state.patients, ...data.entry]

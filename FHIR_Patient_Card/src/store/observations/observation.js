@@ -23,8 +23,8 @@ const actions = {
     })
     .catch(error => Promise.reject(error))
   },
-  getSingleObservation ({ state, commit }, statementID) {
-    return api.fetch(constPaths.OBSERVATION_URL + statementID)
+  getSingleObservation ({ state, commit }, observationID) {
+    return api.fetch(constPaths.OBSERVATION_URL + observationID)
     .then(data => {
       commit('setSelectedObservation', data)
       return state.selectedObservation
