@@ -8,6 +8,14 @@ const api = {
       console.log(error)
       return Promise.reject(error)
     })
+  },
+  updatePatient (url, content) {
+    return axios.put(url, content)
+    .then(response => response.data)
+    .catch(error => {
+      console.log(error)
+      return Promise.reject(error)
+    })
   }
 }
 

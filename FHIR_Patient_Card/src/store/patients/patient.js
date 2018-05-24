@@ -35,6 +35,22 @@ const actions = {
     })
     .catch(error => Promise.reject(error))
   },
+  updatePatient ({ state, commit }, { birthDate, patientID, gender }) {
+    var content = state.selectedPatient
+    content.birthDate = birthDate
+    content.gender = gender
+
+    return api.updatePatient(constPaths.PATIENT_URL + patientID, content)
+    .then(data => {
+      return api.fetch(constPaths.PATIENT_URL + patientID)
+      .then(data => {
+        commit('setSelectedPatient', data)
+        return state.selectedPatient
+      })
+      .catch(error => Promise.reject(error))
+    })
+    .catch(error => Promise.reject(error))
+  },
   getSingleVersionedPatient ({ state, commit }, { patientID, versionNumber }) {
     return api.fetch(constPaths.PATIENT_URL + patientID + '/_history/' + versionNumber)
     .then(data => {

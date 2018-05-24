@@ -119,6 +119,23 @@
         </tr>
       </tbody>
     </table>
+
+    <div class="divider u-mt-20"><span>Record edition</span></div>
+
+    <div class="u-mt-20 l-row">
+      <div class="l-col-4@md"></div>
+      <div class="l-col-4@md">
+        <select class="form-select" v-model="gender">
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+
+        <input type="date" class="form-input" placeholder="Birthdate" v-model="birthDate">
+
+        <button class="btn btn--info u-mt-10" @click="sendUpdate()">Update record</button>
+      </div>
+      <div class="l-col-4@md"></div>
+    </div>
   </main>
 </template>
 
@@ -129,14 +146,29 @@
   export default {
     name: 'SinglePatientView',
     computed: mapGetters(['selectedPatient', 'totalVersions']),
+    data () {
+      return {
+        birthDate: new Date().toISOString().split('T')[0],
+        gender: 'male'
+      }
+    },
     mounted () {
       this.patientID = (this.$route.params.patientID).replace(/Patient\//g, '')
       this.$store.dispatch('patient/getSinglePatient', this.patientID)
       .then(data => {
         mapGetters(['selectedPatient', 'totalVersions'])
+        this.birthDate = this.selectedPatient.birthDate
+        this.gender = this.selectedPatient.gender
       })
     },
     methods: {
+      sendUpdate () {
+        this.$store.dispatch('patient/updatePatient', {
+          birthDate: this.birthDate,
+          patientID: this.patientID,
+          gender: this.gender
+        })
+      },
       get (p, o) {
         return p.reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, o)
       }
