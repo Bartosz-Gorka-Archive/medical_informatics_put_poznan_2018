@@ -12,7 +12,12 @@
             <li class="c-breadcrumb__item">
               <router-link :to="{ name: 'patients' }" class="c-breadcrumb__link">Patients</router-link>
             </li>
-            <li class="c-breadcrumb__item">Patient {{ get(['id'], selectedPatient)}}</li>
+            <li class="c-breadcrumb__item">
+              <router-link :to="{ name: 'single-patient', params: { patientID: get(['id'], selectedPatient)}}"  class="c-breadcrumb__link">
+                Patient {{ get(['id'], selectedPatient) }}
+              </router-link>
+            </li>
+            <li class="c-breadcrumb__item">Version {{ get(['meta', 'versionId'], selectedPatient)}}</li>
           </ol>
         </div>
       </div>
@@ -48,14 +53,7 @@
 
         <tr v-if="get(['meta', 'versionId'], selectedPatient)">
           <td data-label="Key">Version ID</td>
-          <td data-label="Value">
-            Current version {{ get(['meta', 'versionId'], selectedPatient) }}
-            <template v-for="num in this.totalVersions - 1">
-              <router-link :to="{ name: 'single-versioned-patient', params: { patientID: get(['id'], selectedPatient), versionNumber: num }}">
-                [version {{ num }}]
-              </router-link>
-            </template>
-          </td>
+          <td data-label="Value">{{ get(['meta', 'versionId'], selectedPatient) }}</td>
         </tr>
 
         <tr v-if="get(['meta', 'lastUpdated'], selectedPatient)">
@@ -127,13 +125,14 @@
   const { mapGetters } = createNamespacedHelpers('patient')
 
   export default {
-    name: 'SinglePatientView',
-    computed: mapGetters(['selectedPatient', 'totalVersions']),
+    name: 'SingleVersionedPatientView',
+    computed: mapGetters(['selectedPatient']),
     mounted () {
-      this.patientID = (this.$route.params.patientID).replace(/Patient\//g, '')
-      this.$store.dispatch('patient/getSinglePatient', this.patientID)
+      this.patientID = this.$route.params.patientID
+      this.versionNumber = this.$route.params.versionNumber
+      this.$store.dispatch('patient/getSingleVersionedPatient', { patientID: this.patientID, versionNumber: this.versionNumber })
       .then(data => {
-        mapGetters(['selectedPatient', 'totalVersions'])
+        mapGetters(['selectedPatient'])
       })
     },
     methods: {

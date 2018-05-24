@@ -5,6 +5,7 @@ const state = {
   patients: [],
   loadingPatients: true,
   selectedPatient: null,
+  totalVersions: 1,
   familyName: '',
   nextUrl: constPaths.PATIENT_URL + '$everything'
 }
@@ -13,7 +14,8 @@ const getters = {
   patients: state => state.patients,
   loadingPatients: state => state.loadingPatients,
   familyName: state => state.familyName,
-  selectedPatient: state => state.selectedPatient
+  selectedPatient: state => state.selectedPatient,
+  totalVersions: state => state.totalVersions
 }
 
 const actions = {
@@ -27,6 +29,14 @@ const actions = {
   },
   getSinglePatient ({ state, commit }, patientID) {
     return api.fetch(constPaths.PATIENT_URL + patientID)
+    .then(data => {
+      commit('setSelectedPatient', data)
+      return state.selectedPatient
+    })
+    .catch(error => Promise.reject(error))
+  },
+  getSingleVersionedPatient ({ state, commit }, { patientID, versionNumber }) {
+    return api.fetch(constPaths.PATIENT_URL + patientID + '/_history/' + versionNumber)
     .then(data => {
       commit('setSelectedPatient', data)
       return state.selectedPatient
@@ -51,6 +61,7 @@ const mutations = {
   },
   setSelectedPatient (state, data) {
     state.selectedPatient = data
+    state.totalVersions = parseInt(data.meta.versionId)
   },
   setList (state, data) {
     state.patients = [...state.patients, ...data.entry]

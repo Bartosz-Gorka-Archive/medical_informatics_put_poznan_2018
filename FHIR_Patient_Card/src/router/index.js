@@ -24,6 +24,11 @@ const router = new Router({
           component: load('views/SinglePatient')
         },
         {
+          path: 'patients/:patientID/:versionNumber',
+          name: 'single-versioned-patient',
+          component: load('views/SingleVersionedPatient')
+        },
+        {
           path: 'medications',
           name: 'medications',
           component: load('views/Medications')
