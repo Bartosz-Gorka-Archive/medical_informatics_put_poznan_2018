@@ -54,6 +54,11 @@ const router = new Router({
           component: load('views/SingleStatement')
         },
         {
+          path: 'statements/:statementID/:versionNumber',
+          name: 'single-versioned-statement',
+          component: load('views/SingleVersionedStatement')
+        },
+        {
           path: 'observations',
           name: 'observations',
           component: load('views/Observations')

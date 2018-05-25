@@ -10,9 +10,14 @@
           <h1 class="c-toolbar__title">Statement {{ get(['id'], selectedStatement)}}</h1>
           <ol class="c-breadcrumb">
             <li class="c-breadcrumb__item">
-              <router-link :to="{ name: 'statements' }" class="c-breadcrumb__link">Medication Statements</router-link>
+              <router-link :to="{ name: 'statements' }" class="c-breadcrumb__link">Statements</router-link>
             </li>
-            <li class="c-breadcrumb__item">Statement {{ get(['id'], selectedStatement)}}</li>
+            <li class="c-breadcrumb__item">
+              <router-link :to="{ name: 'single-statement', params: { statementID: get(['id'], selectedStatement)}}"  class="c-breadcrumb__link">
+                Statement {{ get(['id'], selectedStatement) }}
+              </router-link>
+            </li>
+            <li class="c-breadcrumb__item">Version {{ get(['meta', 'versionId'], selectedStatement)}}</li>
           </ol>
         </div>
       </div>
@@ -37,21 +42,9 @@
           <td data-label="Value">{{ get(['id'], selectedStatement) }}</td>
         </tr>
 
-        <tr v-if="get(['status'], selectedStatement)">
-          <td data-label="Key">Status</td>
-          <td data-label="Value">{{ get(['status'], selectedStatement) }}</td>
-        </tr>
-
         <tr v-if="get(['meta', 'versionId'], selectedStatement)">
           <td data-label="Key">Version ID</td>
-          <td data-label="Value">
-            Current version {{ get(['meta', 'versionId'], selectedStatement) }}
-            <template v-for="num in this.totalVersions - 1">
-              <router-link :to="{ name: 'single-versioned-statement', params: { statementID: get(['id'], selectedStatement), versionNumber: num }}">
-                [version {{ num }}]
-              </router-link>
-            </template>
-          </td>
+          <td data-label="Value">{{ get(['meta', 'versionId'], selectedStatement) }}</td>
         </tr>
 
         <tr v-if="get(['meta', 'lastUpdated'], selectedStatement)">
@@ -94,7 +87,6 @@
         </tr>
       </tbody>
     </table>
-
   </main>
 </template>
 
@@ -103,13 +95,14 @@
   const { mapGetters } = createNamespacedHelpers('statement')
 
   export default {
-    name: 'SingleStatementView',
-    computed: mapGetters(['selectedStatement', 'totalVersions']),
+    name: 'SingleVersionedStatementView',
+    computed: mapGetters(['selectedStatement']),
     mounted () {
       this.statementID = this.$route.params.statementID
-      this.$store.dispatch('statement/getSingleStatement', this.statementID)
+      this.versionNumber = this.$route.params.versionNumber
+      this.$store.dispatch('statement/getSingleVersionedStatement', { statementID: this.statementID, versionNumber: this.versionNumber })
       .then(data => {
-        mapGetters(['selectedStatement', 'totalVersions'])
+        mapGetters(['selectedStatement'])
       })
     },
     methods: {

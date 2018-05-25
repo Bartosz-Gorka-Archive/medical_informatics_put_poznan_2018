@@ -5,12 +5,14 @@ const state = {
   statements: [],
   selectedStatement: null,
   loadingStatements: true,
+  totalVersions: 1,
   nextUrl: constPaths.MEDICATION_STATEMENT_URL
 }
 
 const getters = {
   statements: state => state.statements,
   loadingStatements: state => state.loadingStatements,
+  totalVersions: state => state.totalVersions,
   selectedStatement: state => state.selectedStatement
 }
 
@@ -25,6 +27,14 @@ const actions = {
   },
   getSingleStatement ({ state, commit }, statementID) {
     return api.fetch(constPaths.MEDICATION_STATEMENT_URL + statementID)
+    .then(data => {
+      commit('setSelectedStatement', data)
+      return state.selectedStatement
+    })
+    .catch(error => Promise.reject(error))
+  },
+  getSingleVersionedStatement ({ state, commit }, { statementID, versionNumber }) {
+    return api.fetch(constPaths.MEDICATION_STATEMENT_URL + statementID + '/_history/' + versionNumber)
     .then(data => {
       commit('setSelectedStatement', data)
       return state.selectedStatement
@@ -50,6 +60,7 @@ const mutations = {
   },
   setSelectedStatement (state, data) {
     state.selectedStatement = data
+    state.totalVersions = parseInt(data.meta.versionId)
   },
   clear (state) {
     state.statements = []
