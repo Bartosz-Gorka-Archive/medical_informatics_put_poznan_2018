@@ -12,7 +12,12 @@
             <li class="c-breadcrumb__item">
               <router-link :to="{ name: 'observations' }" class="c-breadcrumb__link">Observations</router-link>
             </li>
-            <li class="c-breadcrumb__item">Observation {{ get(['id'], selectedObservation)}}</li>
+            <li class="c-breadcrumb__item">
+              <router-link :to="{ name: 'single-observation', params: { observationID: get(['id'], selectedObservation)}}"  class="c-breadcrumb__link">
+                Observation {{ get(['id'], selectedObservation) }}
+              </router-link>
+            </li>
+            <li class="c-breadcrumb__item">Version {{ get(['meta', 'versionId'], selectedObservation)}}</li>
           </ol>
         </div>
       </div>
@@ -37,21 +42,9 @@
           <td data-label="Value">{{ get(['id'], selectedObservation) }}</td>
         </tr>
 
-        <tr v-if="get(['status'], selectedObservation)">
-          <td data-label="Key">Status</td>
-          <td data-label="Value">{{ get(['status'], selectedObservation) }}</td>
-        </tr>
-
         <tr v-if="get(['meta', 'versionId'], selectedObservation)">
           <td data-label="Key">Version ID</td>
-          <td data-label="Value">
-            Current version {{ get(['meta', 'versionId'], selectedObservation) }}
-            <template v-for="num in this.totalVersions - 1">
-              <router-link :to="{ name: 'single-versioned-observation', params: { observationID: get(['id'], selectedObservation), versionNumber: num }}">
-                [version {{ num }}]
-              </router-link>
-            </template>
-          </td>
+          <td data-label="Value">{{ get(['meta', 'versionId'], selectedObservation) }}</td>
         </tr>
 
         <tr v-if="get(['meta', 'lastUpdated'], selectedObservation)">
@@ -94,7 +87,6 @@
         </tr>
       </tbody>
     </table>
-
   </main>
 </template>
 
@@ -103,13 +95,14 @@
   const { mapGetters } = createNamespacedHelpers('observation')
 
   export default {
-    name: 'SingleObservationView',
-    computed: mapGetters(['selectedObservation', 'totalVersions']),
+    name: 'SingleVersionedObservationView',
+    computed: mapGetters(['selectedObservation']),
     mounted () {
       this.observationID = this.$route.params.observationID
-      this.$store.dispatch('observation/getSingleObservation', this.observationID)
+      this.versionNumber = this.$route.params.versionNumber
+      this.$store.dispatch('observation/getSingleVersionedObservation', { observationID: this.observationID, versionNumber: this.versionNumber })
       .then(data => {
-        mapGetters(['selectedObservation', 'totalVersions'])
+        mapGetters(['selectedObservation'])
       })
     },
     methods: {

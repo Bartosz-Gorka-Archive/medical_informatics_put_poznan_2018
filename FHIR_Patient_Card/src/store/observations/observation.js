@@ -5,12 +5,14 @@ const state = {
   observations: [],
   selectedObservation: null,
   loadingObservations: true,
+  totalVersions: 1,
   nextUrl: constPaths.OBSERVATION_URL
 }
 
 const getters = {
   observations: state => state.observations,
   loadingObservations: state => state.loadingObservations,
+  totalVersions: state => state.totalVersions,
   selectedObservation: state => state.selectedObservation
 }
 
@@ -25,6 +27,14 @@ const actions = {
   },
   getSingleObservation ({ state, commit }, observationID) {
     return api.fetch(constPaths.OBSERVATION_URL + observationID)
+    .then(data => {
+      commit('setSelectedObservation', data)
+      return state.selectedObservation
+    })
+    .catch(error => Promise.reject(error))
+  },
+  getSingleVersionedObservation ({ state, commit }, { observationID, versionNumber }) {
+    return api.fetch(constPaths.OBSERVATION_URL + observationID + '/_history/' + versionNumber)
     .then(data => {
       commit('setSelectedObservation', data)
       return state.selectedObservation
@@ -50,6 +60,7 @@ const mutations = {
   },
   setSelectedObservation (state, data) {
     state.selectedObservation = data
+    state.totalVersions = parseInt(data.meta.versionId)
   },
   clear (state) {
     state.observations = []

@@ -67,6 +67,11 @@ const router = new Router({
           path: 'observations/:observationID',
           name: 'single-observation',
           component: load('views/SingleObservation')
+        },
+        {
+          path: 'observations/:observationID/:versionNumber',
+          name: 'single-versioned-observation',
+          component: load('views/SingleVersionedObservation')
         }
       ]
     },
