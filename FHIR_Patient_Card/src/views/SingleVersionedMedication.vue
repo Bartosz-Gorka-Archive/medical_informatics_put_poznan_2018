@@ -12,7 +12,12 @@
             <li class="c-breadcrumb__item">
               <router-link :to="{ name: 'medications' }" class="c-breadcrumb__link">Medications</router-link>
             </li>
-            <li class="c-breadcrumb__item">Medication {{ get(['id'], selectedMedication)}}</li>
+            <li class="c-breadcrumb__item">
+              <router-link :to="{ name: 'single-medication', params: { medicationID: get(['id'], selectedMedication)}}"  class="c-breadcrumb__link">
+                Medication {{ get(['id'], selectedMedication) }}
+              </router-link>
+            </li>
+            <li class="c-breadcrumb__item">Version {{ get(['meta', 'versionId'], selectedMedication)}}</li>
           </ol>
         </div>
       </div>
@@ -37,21 +42,9 @@
           <td data-label="Value">{{ get(['id'], selectedMedication) }}</td>
         </tr>
 
-        <tr v-if="get(['status'], selectedMedication)">
-          <td data-label="Key">Status</td>
-          <td data-label="Value">{{ get(['status'], selectedMedication) }}</td>
-        </tr>
-
         <tr v-if="get(['meta', 'versionId'], selectedMedication)">
           <td data-label="Key">Version ID</td>
-          <td data-label="Value">
-            Current version {{ get(['meta', 'versionId'], selectedMedication) }}
-            <template v-for="num in this.totalVersions - 1">
-              <router-link :to="{ name: 'single-versioned-medication', params: { medicationID: get(['id'], selectedMedication), versionNumber: num }}">
-                [version {{ num }}]
-              </router-link>
-            </template>
-          </td>
+          <td data-label="Value">{{ get(['meta', 'versionId'], selectedMedication) }}</td>
         </tr>
 
         <tr v-if="get(['meta', 'lastUpdated'], selectedMedication)">
@@ -85,7 +78,6 @@
         </tr>
       </tbody>
     </table>
-
   </main>
 </template>
 
@@ -94,13 +86,14 @@
   const { mapGetters } = createNamespacedHelpers('medication')
 
   export default {
-    name: 'SingleMedicationView',
-    computed: mapGetters(['selectedMedication', 'totalVersions']),
+    name: 'SingleVersionedMedicationView',
+    computed: mapGetters(['selectedMedication']),
     mounted () {
       this.medicationID = this.$route.params.medicationID
-      this.$store.dispatch('medication/getSingleMedication', this.medicationID)
+      this.versionNumber = this.$route.params.versionNumber
+      this.$store.dispatch('medication/getSingleVersionedMedication', { medicationID: this.medicationID, versionNumber: this.versionNumber })
       .then(data => {
-        mapGetters(['selectedMedication', 'totalVersions'])
+        mapGetters(['selectedMedication'])
       })
     },
     methods: {

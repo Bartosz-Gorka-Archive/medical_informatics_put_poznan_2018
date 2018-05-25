@@ -5,12 +5,14 @@ const state = {
   medications: [],
   selectedMedication: null,
   loadingMedications: true,
+  totalVersions: 1,
   nextUrl: constPaths.MEDICATION_URL
 }
 
 const getters = {
   medications: state => state.medications,
   loadingMedications: state => state.loadingMedications,
+  totalVersions: state => state.totalVersions,
   selectedMedication: state => state.selectedMedication
 }
 
@@ -25,6 +27,14 @@ const actions = {
   },
   getSingleMedication ({ state, commit }, medicationID) {
     return api.fetch(constPaths.MEDICATION_URL + medicationID)
+    .then(data => {
+      commit('setSelectedMedication', data)
+      return state.selectedMedication
+    })
+    .catch(error => Promise.reject(error))
+  },
+  getSingleVersionedMedication ({ state, commit }, { medicationID, versionNumber }) {
+    return api.fetch(constPaths.MEDICATION_URL + medicationID + '/_history/' + versionNumber)
     .then(data => {
       commit('setSelectedMedication', data)
       return state.selectedMedication
@@ -50,6 +60,7 @@ const mutations = {
   },
   setSelectedMedication (state, data) {
     state.selectedMedication = data
+    state.totalVersions = parseInt(data.meta.versionId)
   },
   clear (state) {
     state.medications = []
