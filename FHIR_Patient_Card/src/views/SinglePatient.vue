@@ -136,6 +136,60 @@
       </div>
       <div class="l-col-4@md"></div>
     </div>
+
+    <table class="table table--data u-mt-40">
+      <thead>
+        <tr>
+          <th>Datetime</th>
+          <th>Event type</th>
+          <th>Resource ID</th>
+          <th>Code</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tfoot>
+        <tr>
+          <th>Datetime</th>
+          <th>Event type</th>
+          <th>Resource ID</th>
+          <th>Code</th>
+          <th>Value</th>
+        </tr>
+      </tfoot>
+      <tbody>
+        <template v-for="(observation, index) in this.selectedObservations">
+          <tr v-if="get(['resource', 'resourceType'], observation) === 'Observation'">
+            <td data-label="Date">{{ new Date(get(['resource', 'meta', 'lastUpdated'], observation)).toLocaleString() }}</td>
+            <td data-label="Type">{{ get(['resource', 'resourceType'], observation) }}</td>
+            <td data-label="Resource ID">
+              <router-link :to="{ name: 'single-observation', params: { observationID: get(['resource', 'id'], observation) }}">
+                {{ get(['resource', 'id'], observation) }}
+              </router-link>
+            </td>
+            <td data-label="Code">{{ get(['resource', 'valueQuantity', 'code'], observation) }}</td>
+            <td data-label="Value">{{ get(['resource', 'valueQuantity', 'value'], observation) }} {{ get(['resource', 'valueQuantity', 'unit'], observation) }}</td>
+          </tr>
+          <tr v-if="get(['resource', 'resourceType'], observation) === 'MedicationStatement'">
+            <td data-label="Date">{{ new Date(get(['resource', 'meta', 'lastUpdated'], observation)).toLocaleString() }}</td>
+            <td data-label="Type">{{ get(['resource', 'resourceType'], observation) }}</td>
+            <td data-label="Resource ID">
+              <router-link :to="{ name: 'single-statement', params: { statementID: get(['resource', 'id'], observation) }}">
+                {{ get(['resource', 'id'], observation) }}
+              </router-link>
+            </td>
+            <td data-label="Value">{{ get(['resource', 'medicationCodeableConcept', 'coding', 0, 'display'], observation) }} {{ get(['resource', 'valueQuantity', 'unit'], observation) }}</td>
+          </tr>
+        </template>
+
+        <infinite-loading
+          v-if="loadingObservations"
+          v-on:infinite="infiniteHandler"
+          ref="infiniteLoading"
+          spinner="bubbles">
+        </infinite-loading>
+      </tbody>
+    </table>
+
   </main>
 </template>
 
@@ -145,11 +199,12 @@
 
   export default {
     name: 'SinglePatientView',
-    computed: mapGetters(['selectedPatient', 'totalVersions']),
+    computed: mapGetters(['selectedPatient', 'totalVersions', 'loadingObservations']),
     data () {
       return {
         birthDate: new Date().toISOString().split('T')[0],
-        gender: 'male'
+        gender: 'male',
+        selectedObservations: []
       }
     },
     mounted () {
@@ -171,6 +226,23 @@
       },
       get (p, o) {
         return p.reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, o)
+      },
+      infiniteHandler (state) {
+        this.$store.dispatch('patient/getPatientObservations')
+        .then(data => {
+          mapGetters(['loadingObservations', 'observations'])
+          this.selectedObservations = data
+          this.selectedObservations.sort(function (a, b) {
+            var firstTime = new Date(a.resource.meta.lastUpdated).getTime()
+            var secondTime = new Date(b.resource.meta.lastUpdated).getTime()
+            return firstTime <= secondTime
+          })
+          if (this.loadingObservations) {
+            state.loaded()
+          } else {
+            state.complete()
+          }
+        })
       }
     }
   }

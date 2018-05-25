@@ -58,13 +58,12 @@
           </tr>
         </template>
 
-      <infinite-loading
-        v-if="loadingObservations"
-        v-on:infinite="infiniteHandler"
-        ref="infiniteLoading"
-        spinner="bubbles">
-      </infinite-loading>
-
+        <infinite-loading
+          v-if="loadingObservations"
+          v-on:infinite="infiniteHandler"
+          ref="infiniteLoading"
+          spinner="bubbles">
+        </infinite-loading>
       </tbody>
     </table>
 

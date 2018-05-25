@@ -4,18 +4,23 @@ import constPaths from '@/constants/constant-paths.js'
 const state = {
   patients: [],
   loadingPatients: true,
+  loadingObservations: true,
   selectedPatient: null,
+  observations: [],
   totalVersions: 1,
   familyName: '',
-  nextUrl: constPaths.PATIENT_URL + '$everything'
+  patientDetailsURL: constPaths.PATIENT_URL,
+  nextUrl: constPaths.PATIENT_URL
 }
 
 const getters = {
   patients: state => state.patients,
   loadingPatients: state => state.loadingPatients,
+  loadingObservations: state => state.loadingObservations,
   familyName: state => state.familyName,
   selectedPatient: state => state.selectedPatient,
-  totalVersions: state => state.totalVersions
+  totalVersions: state => state.totalVersions,
+  observations: state => state.observations
 }
 
 const actions = {
@@ -35,11 +40,18 @@ const actions = {
     })
     .catch(error => Promise.reject(error))
   },
+  getPatientObservations ({ state, commit }) {
+    return api.fetch(state.patientDetailsURL)
+    .then(data => {
+      commit('setObservation', data)
+      return state.observations
+    })
+    .catch(error => Promise.reject(error))
+  },
   updatePatient ({ state, commit }, { birthDate, patientID, gender }) {
     var content = state.selectedPatient
     content.birthDate = birthDate
     content.gender = gender
-
     return api.updatePatient(constPaths.PATIENT_URL + patientID, content)
     .then(data => {
       return api.fetch(constPaths.PATIENT_URL + patientID)
@@ -77,7 +89,18 @@ const mutations = {
   },
   setSelectedPatient (state, data) {
     state.selectedPatient = data
+    state.patientDetailsURL = constPaths.PATIENT_URL + data.id + '/$everything?_sort_by=date'
+    state.loadingObservations = true
     state.totalVersions = parseInt(data.meta.versionId)
+  },
+  setObservation (state, data) {
+    state.observations = [...state.observations, ...data.entry]
+    if (data.link[1] && data.link[1].relation === 'next') {
+      state.patientDetailsURL = data.link[1].url
+      state.loadingObservations = true
+    } else {
+      state.loadingObservations = false
+    }
   },
   setList (state, data) {
     state.patients = [...state.patients, ...data.entry]
