@@ -89,12 +89,16 @@ const mutations = {
   },
   setSelectedPatient (state, data) {
     state.selectedPatient = data
+    state.observations = []
     state.patientDetailsURL = constPaths.PATIENT_URL + data.id + '/$everything?_sort_by=date'
     state.loadingObservations = true
     state.totalVersions = parseInt(data.meta.versionId)
   },
   setObservation (state, data) {
     state.observations = [...state.observations, ...data.entry]
+    state.observations.sort(function (a, b) {
+      return new Date(a.resource.meta.lastUpdated).getTime() <= new Date(b.resource.meta.lastUpdated).getTime()
+    })
     if (data.link[1] && data.link[1].relation === 'next') {
       state.patientDetailsURL = data.link[1].url
       state.loadingObservations = true
