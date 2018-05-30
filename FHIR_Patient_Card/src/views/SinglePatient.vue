@@ -137,11 +137,23 @@
       <div class="l-col-4@md"></div>
     </div>
 
-    <table class="table table--data u-mt-40">
+    <div class="divider u-mt-20"><span>Timeline</span></div>
+
+    <div class="u-mt-20 l-row">
+      <div class="l-col-4@md"></div>
+      <div class="l-col-4@md">
+        <input type="date" class="form-input" placeholder="Birthdate" v-model="selectedDate">
+
+        <button class="btn btn--default u-mt-10" @click="filterDate()">Filter date</button>
+      </div>
+      <div class="l-col-4@md"></div>
+    </div>
+
+    <table class="table table--data u-mt-20">
       <thead>
         <tr>
+          <th>Icon</th>
           <th>Datetime</th>
-          <th>Event type</th>
           <th>Resource ID</th>
           <th>Code</th>
           <th>Value</th>
@@ -149,18 +161,18 @@
       </thead>
       <tfoot>
         <tr>
+          <th>Icon</th>
           <th>Datetime</th>
-          <th>Event type</th>
           <th>Resource ID</th>
           <th>Code</th>
           <th>Value</th>
         </tr>
       </tfoot>
       <tbody>
-        <template v-for="(observation, index) in this.selectedObservations">
+        <template v-for="(observation, index) in this.observations">
           <tr v-if="get(['resource', 'resourceType'], observation) === 'Observation'">
+            <td data-label="Icon"><i class="icon-search"></i></td>
             <td data-label="Date">{{ new Date(get(['resource', 'meta', 'lastUpdated'], observation)).toLocaleString() }}</td>
-            <td data-label="Type">{{ get(['resource', 'resourceType'], observation) }}</td>
             <td data-label="Resource ID">
               <router-link :to="{ name: 'single-observation', params: { observationID: get(['resource', 'id'], observation) }}">
                 {{ get(['resource', 'id'], observation) }}
@@ -170,8 +182,8 @@
             <td data-label="Value">{{ get(['resource', 'valueQuantity', 'value'], observation) }} {{ get(['resource', 'valueQuantity', 'unit'], observation) }}</td>
           </tr>
           <tr v-if="get(['resource', 'resourceType'], observation) === 'MedicationStatement'">
+            <td data-label="Icon"><i class="icon-syringe"></i></td>
             <td data-label="Date">{{ new Date(get(['resource', 'meta', 'lastUpdated'], observation)).toLocaleString() }}</td>
-            <td data-label="Type">{{ get(['resource', 'resourceType'], observation) }}</td>
             <td data-label="Resource ID">
               <router-link :to="{ name: 'single-statement', params: { statementID: get(['resource', 'id'], observation) }}">
                 {{ get(['resource', 'id'], observation) }}
@@ -199,12 +211,12 @@
 
   export default {
     name: 'SinglePatientView',
-    computed: mapGetters(['selectedPatient', 'totalVersions', 'loadingObservations']),
+    computed: mapGetters(['selectedPatient', 'totalVersions', 'loadingObservations', 'observations']),
     data () {
       return {
         birthDate: new Date().toISOString().split('T')[0],
-        gender: 'male',
-        selectedObservations: []
+        selectedDate: new Date().toISOString().split('T')[0],
+        gender: 'male'
       }
     },
     mounted () {
@@ -224,6 +236,16 @@
           gender: this.gender
         })
       },
+      filterDate () {
+        // var myDate = this.selectedDate
+        // console.log(myDate)
+        // this.observations.filter(function (record) {
+        //   var date = new Date(record.resource.meta.lastUpdated)
+        //   return date.getFullYear() === parseInt(myDate.split('-')[0]) &&
+        //          date.getMonth() === parseInt(myDate.split('-')[1]) &&
+        //          date.getDate() === parseInt(myDate.split('-')[2])
+        // })
+      },
       get (p, o) {
         return p.reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, o)
       },
@@ -231,12 +253,6 @@
         this.$store.dispatch('patient/getPatientObservations')
         .then(data => {
           mapGetters(['loadingObservations', 'observations'])
-          this.selectedObservations = data
-          this.selectedObservations.sort(function (a, b) {
-            var firstTime = new Date(a.resource.meta.lastUpdated).getTime()
-            var secondTime = new Date(b.resource.meta.lastUpdated).getTime()
-            return firstTime <= secondTime
-          })
           if (this.loadingObservations) {
             state.loaded()
           } else {
