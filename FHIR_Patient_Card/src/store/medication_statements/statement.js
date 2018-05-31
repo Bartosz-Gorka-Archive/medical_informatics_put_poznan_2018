@@ -41,6 +41,25 @@ const actions = {
     })
     .catch(error => Promise.reject(error))
   },
+  updateStatement ({ state, commit }, { concept, statementID, dosage }) {
+    // Build changes
+    var content = state.selectedStatement
+    content.medicationCodeableConcept.text = concept
+    content.medicationCodeableConcept.coding[0].display = concept
+    content.dosage[0].text = dosage
+
+    // Send changes
+    return api.update(constPaths.MEDICATION_STATEMENT_URL + statementID, content)
+    .then(data => {
+      return api.fetch(constPaths.MEDICATION_STATEMENT_URL + statementID)
+      .then(data => {
+        commit('setSelectedStatement', data)
+        return state.selectedStatement
+      })
+      .catch(error => Promise.reject(error))
+    })
+    .catch(error => Promise.reject(error))
+  },
   clear ({ state, commit }) {
     commit('clear')
     return state.statements

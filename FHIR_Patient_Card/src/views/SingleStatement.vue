@@ -95,6 +95,19 @@
       </tbody>
     </table>
 
+    <div class="divider u-mt-20"><span>Record edition</span></div>
+
+    <div class="u-mt-20 l-row">
+      <div class="l-col-4@md"></div>
+      <div class="l-col-4@md">
+        <input type="text" class="form-input" placeholder="Dosage" v-model="dosage">
+        <input type="text" class="form-input" placeholder="Concept" v-model="concept">
+
+        <button class="btn btn--info u-mt-10" @click="sendUpdate()">Update record</button>
+      </div>
+      <div class="l-col-4@md"></div>
+    </div>
+
   </main>
 </template>
 
@@ -105,14 +118,29 @@
   export default {
     name: 'SingleStatementView',
     computed: mapGetters(['selectedStatement', 'totalVersions']),
+    data () {
+      return {
+        concept: '-',
+        dosage: '-'
+      }
+    },
     mounted () {
       this.statementID = this.$route.params.statementID
       this.$store.dispatch('statement/getSingleStatement', this.statementID)
       .then(data => {
         mapGetters(['selectedStatement', 'totalVersions'])
+        this.concept = ['medicationCodeableConcept', 'coding', 0, 'display'].reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, this.selectedStatement)
+        this.dosage = ['dosage', 0, 'text'].reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, this.selectedStatement)
       })
     },
     methods: {
+      sendUpdate () {
+        this.$store.dispatch('statement/updateStatement', {
+          concept: this.concept,
+          statementID: this.statementID,
+          dosage: this.dosage
+        })
+      },
       taken (status) {
         switch (status) {
           case 'y':
