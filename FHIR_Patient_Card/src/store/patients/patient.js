@@ -54,7 +54,7 @@ const actions = {
     var content = state.selectedPatient
     content.birthDate = birthDate
     content.gender = gender
-    return api.updatePatient(constPaths.PATIENT_URL + patientID, content)
+    return api.update(constPaths.PATIENT_URL + patientID, content)
     .then(data => {
       return api.fetch(constPaths.PATIENT_URL + patientID)
       .then(data => {
@@ -109,11 +109,6 @@ const mutations = {
     // Store observations
     state.observations = [...state.observations, ...data.entry]
 
-    // Sort by lastUpdated inside meta field
-    state.observations.sort(function (a, b) {
-      return new Date(a.resource.meta.lastUpdated).getTime() <= new Date(b.resource.meta.lastUpdated).getTime()
-    })
-
     // Date filter
     if (state.date !== '') {
       state.observations = state.observations.filter(function (record) {
@@ -123,6 +118,11 @@ const mutations = {
                date.getDate() === parseInt(state.date.split('-')[2])
       })
     }
+
+    // Sort by lastUpdated inside meta field
+    state.observations.sort(function (a, b) {
+      return new Date(a.resource.meta.lastUpdated).getTime() <= new Date(b.resource.meta.lastUpdated).getTime()
+    })
 
     // Load more content or reset
     if (data.link[1] && data.link[1].relation === 'next') {

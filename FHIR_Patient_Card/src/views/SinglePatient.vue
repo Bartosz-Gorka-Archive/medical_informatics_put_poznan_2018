@@ -179,7 +179,7 @@
                 {{ get(['resource', 'id'], observation) }}
               </router-link>
             </td>
-            <td data-label="Code">{{ get(['resource', 'valueQuantity', 'code'], observation) }}</td>
+            <td data-label="Code">{{ get(['resource', 'valueQuantity', 'code'], observation) }} {{ get(['resource', 'code', 'text'], observation) }}</td>
             <td data-label="Value">{{ get(['resource', 'valueQuantity', 'value'], observation) }} {{ get(['resource', 'valueQuantity', 'unit'], observation) }}</td>
           </tr>
           <tr v-if="get(['resource', 'resourceType'], observation) === 'MedicationStatement'">
@@ -190,7 +190,8 @@
                 {{ get(['resource', 'id'], observation) }}
               </router-link>
             </td>
-            <td data-label="Value">{{ get(['resource', 'medicationCodeableConcept', 'coding', 0, 'display'], observation) }} {{ get(['resource', 'valueQuantity', 'unit'], observation) }}</td>
+            <td data-label="Code">{{ get(['resource', 'medicationCodeableConcept', 'coding', 0, 'display'], observation) }} {{ get(['resource', 'valueQuantity', 'unit'], observation) }}</td>
+            <td data-label="Value">{{ get(['resource', 'medicationCodeableConcept', 'value'], observation) }}</td>
           </tr>
         </template>
 

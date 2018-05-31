@@ -86,6 +86,19 @@
       </tbody>
     </table>
 
+    <div class="divider u-mt-20"><span>Record edition</span></div>
+
+    <div class="u-mt-20 l-row">
+      <div class="l-col-4@md"></div>
+      <div class="l-col-4@md">
+        <input type="text" class="form-input" placeholder="Code" v-model="code">
+        <input type="text" class="form-input" placeholder="Display text" v-model="display">
+
+        <button class="btn btn--info u-mt-10" @click="sendUpdate()">Update record</button>
+      </div>
+      <div class="l-col-4@md"></div>
+    </div>
+
   </main>
 </template>
 
@@ -96,14 +109,29 @@
   export default {
     name: 'SingleMedicationView',
     computed: mapGetters(['selectedMedication', 'totalVersions']),
+    data () {
+      return {
+        display: '-',
+        code: '-'
+      }
+    },
     mounted () {
       this.medicationID = this.$route.params.medicationID
       this.$store.dispatch('medication/getSingleMedication', this.medicationID)
       .then(data => {
         mapGetters(['selectedMedication', 'totalVersions'])
+        this.display = ['code', 'coding', 0, 'display'].reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, this.selectedMedication)
+        this.code = ['code', 'coding', 0, 'code'].reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, this.selectedMedication)
       })
     },
     methods: {
+      sendUpdate () {
+        this.$store.dispatch('medication/updateMedication', {
+          code: this.code,
+          medicationID: this.medicationID,
+          display: this.display
+        })
+      },
       get (p, o) {
         return p.reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, o)
       }

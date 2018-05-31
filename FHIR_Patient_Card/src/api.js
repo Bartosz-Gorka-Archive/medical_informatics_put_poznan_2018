@@ -9,7 +9,7 @@ const api = {
       return Promise.reject(error)
     })
   },
-  updatePatient (url, content) {
+  update (url, content) {
     return axios.put(url, content)
     .then(response => response.data)
     .catch(error => {
