@@ -41,6 +41,26 @@ const actions = {
     })
     .catch(error => Promise.reject(error))
   },
+  updateObservation ({ state, commit }, { code, observationID, display, value }) {
+    // Build changes
+    var content = state.selectedObservation
+    content.code.text = display
+    content.code.coding[0].display = display
+    content.code.coding[0].code = code
+    content.valueQuantity.value = value
+
+    // Send changes
+    return api.update(constPaths.OBSERVATION_URL + observationID, content)
+    .then(data => {
+      return api.fetch(constPaths.OBSERVATION_URL + observationID)
+      .then(data => {
+        commit('setSelectedObservation', data)
+        return state.selectedObservation
+      })
+      .catch(error => Promise.reject(error))
+    })
+    .catch(error => Promise.reject(error))
+  },
   clear ({ state, commit }) {
     commit('clear')
     return state.observations

@@ -95,6 +95,20 @@
       </tbody>
     </table>
 
+    <div class="divider u-mt-20"><span>Record edition</span></div>
+
+    <div class="u-mt-20 l-row">
+      <div class="l-col-4@md"></div>
+      <div class="l-col-4@md">
+        <input type="text" class="form-input" placeholder="Code" v-model="code">
+        <input type="text" class="form-input" placeholder="Display text" v-model="display">
+        <input type="text" class="form-input" placeholder="Value" v-model="value">
+
+        <button class="btn btn--info u-mt-10" @click="sendUpdate()">Update record</button>
+      </div>
+      <div class="l-col-4@md"></div>
+    </div>
+
   </main>
 </template>
 
@@ -105,14 +119,32 @@
   export default {
     name: 'SingleObservationView',
     computed: mapGetters(['selectedObservation', 'totalVersions']),
+    data () {
+      return {
+        display: '-',
+        code: '-',
+        value: '-'
+      }
+    },
     mounted () {
       this.observationID = this.$route.params.observationID
       this.$store.dispatch('observation/getSingleObservation', this.observationID)
       .then(data => {
         mapGetters(['selectedObservation', 'totalVersions'])
+        this.display = ['code', 'coding', 0, 'display'].reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, this.selectedObservation)
+        this.code = ['code', 'coding', 0, 'code'].reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, this.selectedObservation)
+        this.value = ['valueQuantity', 'value'].reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, this.selectedObservation)
       })
     },
     methods: {
+      sendUpdate () {
+        this.$store.dispatch('observation/updateObservation', {
+          code: this.code,
+          observationID: this.observationID,
+          display: this.display,
+          value: this.value
+        })
+      },
       get (p, o) {
         return p.reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, o)
       }
