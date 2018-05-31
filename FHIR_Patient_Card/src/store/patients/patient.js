@@ -11,6 +11,10 @@ const state = {
   familyName: '',
   date: '',
   patientID: '',
+  dataGraph: [
+    [],
+    []
+  ],
   patientDetailsURL: constPaths.PATIENT_URL,
   nextUrl: constPaths.PATIENT_URL
 }
@@ -22,7 +26,8 @@ const getters = {
   familyName: state => state.familyName,
   selectedPatient: state => state.selectedPatient,
   totalVersions: state => state.totalVersions,
-  observations: state => state.observations
+  observations: state => state.observations,
+  dataGraph: state => state.dataGraph
 }
 
 const actions = {
@@ -100,12 +105,17 @@ const mutations = {
   setSelectedPatient (state, data) {
     state.selectedPatient = data
     state.observations = []
+    state.dataGraph[0] = []
+    state.dataGraph[1] = []
     state.patientDetailsURL = constPaths.PATIENT_URL + data.id + '/$everything?_sort_by=date'
     state.loadingObservations = true
     state.patientID = data.id
     state.totalVersions = parseInt(data.meta.versionId)
   },
   setObservation (state, data) {
+    state.dataGraph[0] = []
+    state.dataGraph[1] = []
+
     // Store observations
     state.observations = [...state.observations, ...data.entry]
 
@@ -122,6 +132,21 @@ const mutations = {
     // Sort by lastUpdated inside meta field
     state.observations.sort(function (a, b) {
       return new Date(a.resource.meta.lastUpdated).getTime() <= new Date(b.resource.meta.lastUpdated).getTime()
+    })
+
+    // Select Weight from observations
+    var tempArray = []
+    state.observations.forEach(function (element) {
+      if (['resource', 'code', 'text'].reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, element) === 'Weight') {
+        tempArray.push({date: new Date(element.resource.effectiveDateTime), value: element.resource.valueQuantity.value})
+      }
+    })
+    tempArray.sort(function (a, b) {
+      return a.date.getTime() > b.date.getTime()
+    })
+    tempArray.forEach(function (element) {
+      state.dataGraph[0].push(element.value)
+      state.dataGraph[1].push(element.date.toLocaleString())
     })
 
     // Load more content or reset
@@ -159,6 +184,8 @@ const mutations = {
   },
   clear (state) {
     state.patients = []
+    state.dataGraph[0] = []
+    state.dataGraph[1] = []
     state.date = ''
     state.nextUrl = constPaths.PATIENT_URL
     state.loadingPatients = true

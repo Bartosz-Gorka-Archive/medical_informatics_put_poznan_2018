@@ -137,7 +137,17 @@
       <div class="l-col-4@md"></div>
     </div>
 
-    <div class="divider u-mt-20"><span>Timeline</span></div>
+    <div class="divider u-mt-40 u-mb-20"><span>Graph</span></div>
+
+    <line-graph
+      description="Patient weight [in kg]"
+      background="#52a956"
+      :data="this.dataGraph[0]"
+      :labels="this.dataGraph[1]"
+      :bind="true">
+    </line-graph>
+
+    <div class="divider u-mt-40"><span>Timeline</span></div>
 
     <div class="u-mt-20 l-row">
       <div class="l-col-4@md"></div>
@@ -208,12 +218,16 @@
 </template>
 
 <script>
+  import LineGraph from '@/graphs/LineGraph'
   import { createNamespacedHelpers } from 'vuex'
   const { mapGetters } = createNamespacedHelpers('patient')
 
   export default {
     name: 'SinglePatientView',
-    computed: mapGetters(['selectedPatient', 'totalVersions', 'loadingObservations', 'observations']),
+    computed: mapGetters(['selectedPatient', 'totalVersions', 'loadingObservations', 'observations', 'dataGraph']),
+    components: {
+      LineGraph
+    },
     data () {
       return {
         birthDate: new Date().toISOString().split('T')[0],
@@ -225,7 +239,7 @@
       this.patientID = (this.$route.params.patientID).replace(/Patient\//g, '')
       this.$store.dispatch('patient/getSinglePatient', this.patientID)
       .then(data => {
-        mapGetters(['selectedPatient', 'totalVersions'])
+        mapGetters(['selectedPatient', 'totalVersions', 'dataGraph'])
         this.birthDate = this.selectedPatient.birthDate
         this.gender = this.selectedPatient.gender
       })
@@ -257,7 +271,7 @@
       infiniteHandler (state) {
         this.$store.dispatch('patient/getPatientObservations')
         .then(data => {
-          mapGetters(['loadingObservations', 'observations'])
+          mapGetters(['loadingObservations', 'observations', 'dataGraph'])
           if (this.loadingObservations) {
             state.loaded()
           } else {
