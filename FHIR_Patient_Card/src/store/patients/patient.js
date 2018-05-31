@@ -9,6 +9,8 @@ const state = {
   observations: [],
   totalVersions: 1,
   familyName: '',
+  date: '',
+  patientID: '',
   patientDetailsURL: constPaths.PATIENT_URL,
   nextUrl: constPaths.PATIENT_URL
 }
@@ -74,6 +76,14 @@ const actions = {
   setFindByFamilyName ({ state, commit }, name) {
     commit('setFamilyNameFilter', name)
   },
+  setDateFilter ({ state, commit }, date) {
+    commit('filterByDate', date)
+    return state.observations
+  },
+  clearDateFilter ({ state, commit }) {
+    commit('clearDateFilter')
+    return state.observations
+  },
   clear ({ state, commit }) {
     commit('clear')
     return state.patients
@@ -92,13 +102,29 @@ const mutations = {
     state.observations = []
     state.patientDetailsURL = constPaths.PATIENT_URL + data.id + '/$everything?_sort_by=date'
     state.loadingObservations = true
+    state.patientID = data.id
     state.totalVersions = parseInt(data.meta.versionId)
   },
   setObservation (state, data) {
+    // Store observations
     state.observations = [...state.observations, ...data.entry]
+
+    // Sort by lastUpdated inside meta field
     state.observations.sort(function (a, b) {
       return new Date(a.resource.meta.lastUpdated).getTime() <= new Date(b.resource.meta.lastUpdated).getTime()
     })
+
+    // Date filter
+    if (state.date !== '') {
+      state.observations = state.observations.filter(function (record) {
+        var date = new Date(record.resource.meta.lastUpdated)
+        return date.getFullYear() === parseInt(state.date.split('-')[0]) &&
+               (date.getMonth() + 1) === parseInt(state.date.split('-')[1]) &&
+               date.getDate() === parseInt(state.date.split('-')[2])
+      })
+    }
+
+    // Load more content or reset
     if (data.link[1] && data.link[1].relation === 'next') {
       state.patientDetailsURL = data.link[1].url
       state.loadingObservations = true
@@ -116,8 +142,24 @@ const mutations = {
       state.loadingPatients = false
     }
   },
+  filterByDate (state, filteredDate) {
+    state.date = filteredDate
+    state.observations = state.observations.filter(function (record) {
+      var date = new Date(record.resource.meta.lastUpdated)
+      return date.getFullYear() === parseInt(filteredDate.split('-')[0]) &&
+             (date.getMonth() + 1) === parseInt(filteredDate.split('-')[1]) &&
+             date.getDate() === parseInt(filteredDate.split('-')[2])
+    })
+  },
+  clearDateFilter (state) {
+    state.observations = []
+    state.loadingObservations = true
+    state.date = ''
+    state.patientDetailsURL = constPaths.PATIENT_URL + state.patientID + '/$everything?_sort_by=date'
+  },
   clear (state) {
     state.patients = []
+    state.date = ''
     state.nextUrl = constPaths.PATIENT_URL
     state.loadingPatients = true
   }

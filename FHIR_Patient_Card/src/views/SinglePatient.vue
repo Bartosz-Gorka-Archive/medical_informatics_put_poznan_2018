@@ -145,6 +145,7 @@
         <input type="date" class="form-input" placeholder="Birthdate" v-model="selectedDate">
 
         <button class="btn btn--default u-mt-10" @click="filterDate()">Filter date</button>
+        <button class="btn btn--default u-mt-10" @click="clearDate()">Clear</button>
       </div>
       <div class="l-col-4@md"></div>
     </div>
@@ -237,14 +238,17 @@
         })
       },
       filterDate () {
-        // var myDate = this.selectedDate
-        // console.log(myDate)
-        // this.observations.filter(function (record) {
-        //   var date = new Date(record.resource.meta.lastUpdated)
-        //   return date.getFullYear() === parseInt(myDate.split('-')[0]) &&
-        //          date.getMonth() === parseInt(myDate.split('-')[1]) &&
-        //          date.getDate() === parseInt(myDate.split('-')[2])
-        // })
+        var myDate = this.selectedDate
+        this.$store.dispatch('patient/setDateFilter', myDate)
+        .then(data => {
+          mapGetters(['observations'])
+        })
+      },
+      clearDate () {
+        this.$store.dispatch('patient/clearDateFilter')
+        .then(data => {
+          mapGetters(['loadingObservations', 'observations'])
+        })
       },
       get (p, o) {
         return p.reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, o)
